@@ -1,2 +1,14 @@
-Flask 3.1.2
-Flask-SQLAlchemy 3.1.1
+Flask==3.1.2
+Flask-SQLAlchemy==3.1.1
+Werkzeug==3.1.5
+Flask-migrate==4.1.0
+Flask-iogin==0.6.3
+python-dotenv==1.2.1
+Flask-CORS==6.0.2
+Flask-WTF==1.2.2
+WTForms==3.2.1
+Flask-DebugToolbar==0.16.0
+pytest==9.0.2
+pandas==3.0.0
+numpy==2.4.2
+gunicorn==25.0.2
