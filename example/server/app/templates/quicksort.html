@@ -1,0 +1,1703 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>快速排序算法 - 基于知识图谱的算法学习推荐系统</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* ========== 全局基础样式 ========== */
+        :root {
+            --bg-deep: #0f1923;
+            --bg-card: #1a2634;
+            --bg-card-alt: #1e2d3d;
+            --bg-elevated: #243447;
+            --border-color: rgba(56, 189, 248, 0.12);
+            --border-glow: rgba(56, 189, 248, 0.25);
+            --primary: #38bdf8;
+            --primary-dim: #0ea5e9;
+            --accent: #f472b6;
+            --accent-dim: #ec4899;
+            --success: #34d399;
+            --warning: #fbbf24;
+            --danger: #f87171;
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --input-bg: #1a2634;
+            --visualization-bg: #1a2634;
+            --code-bg: #1a2634;
+            --control-bg: #1a2634;
+            --info-bg: #1a2634;
+            --stats-bg: #1a2634;
+            --notes-bg: #1a2634;
+            --chat-bg: #1a2634;
+            --analysis-bg: #1a2634;
+        }
+
+        /* ========== 浅色主题 ========== */
+        [data-theme="light"] {
+            --bg-deep: #f0f4f8;
+            --bg-card: #ffffff;
+            --bg-card-alt: #f7f9fc;
+            --bg-elevated: #edf2f7;
+            --border-color: rgba(0, 0, 0, 0.08);
+            --border-glow: rgba(14, 165, 233, 0.25);
+            --primary: #0284c7;
+            --primary-dim: #0369a1;
+            --accent: #db2777;
+            --accent-dim: #be185d;
+            --success: #059669;
+            --warning: #d97706;
+            --danger: #dc2626;
+            --text-primary: #1e293b;
+            --text-secondary: #475569;
+            --text-muted: #94a3b8;
+            --input-bg: #f8fafc;
+            --visualization-bg: #ffffff;
+            --code-bg: #f6f8fa;
+            --control-bg: #ffffff;
+            --info-bg: #ffffff;
+            --stats-bg: #ffffff;
+            --notes-bg: #ffffff;
+            --chat-bg: #ffffff;
+            --analysis-bg: #ffffff;
+        }
+        [data-theme="light"] .code-container { background: #f6f8fa; color: #24292f; border-color: rgba(0,0,0,0.1); }
+        [data-theme="light"] .keyword { color: #cf222e; }
+        [data-theme="light"] .function { color: #0550ae; }
+        [data-theme="light"] .comment { color: #6e7781; }
+        [data-theme="light"] .highlight { background-color: rgba(14, 165, 233, 0.08); }
+        [data-theme="light"] .chat-msg.user { background: linear-gradient(135deg, #0284c7, #0369a1); }
+        [data-theme="light"] body {
+            background-image:
+                radial-gradient(ellipse at 10% 20%, rgba(14, 165, 233, 0.04) 0%, transparent 50%),
+                radial-gradient(ellipse at 90% 80%, rgba(219, 39, 119, 0.03) 0%, transparent 50%);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: var(--bg-deep);
+            background-image:
+                radial-gradient(ellipse at 10% 20%, rgba(56, 189, 248, 0.06) 0%, transparent 50%),
+                radial-gradient(ellipse at 90% 80%, rgba(244, 114, 182, 0.04) 0%, transparent 50%);
+            padding: 24px;
+            color: var(--text-primary);
+            min-height: 100vh;
+            transition: background-color 0.35s ease, color 0.35s ease;
+        }
+        .main-title {
+            text-align: center;
+            margin-bottom: 28px;
+            font-size: clamp(22px, 3vw, 30px);
+            font-weight: 900;
+            letter-spacing: 2px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .container { max-width: 1440px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px; }
+        .row { display: flex; gap: 24px; width: 100%; }
+        .row-single { width: 100%; }
+        .col {
+            flex: 1;
+            border-radius: 16px;
+            padding: 20px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255,255,255,0.03);
+            display: flex;
+            flex-direction: column;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        .col:hover {
+            border-color: var(--border-glow);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(56, 189, 248, 0.08);
+        }
+        .panel-title {
+            font-size: 17px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: var(--primary);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            font-size: 14px;
+        }
+
+        /* ========== 按钮通用样式 ========== */
+        .btn {
+            padding: 9px 18px;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            font-family: 'Noto Sans SC', sans-serif;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--primary-dim);
+            box-shadow: 0 2px 8px rgba(14, 165, 233, 0.25);
+            letter-spacing: 0.5px;
+        }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(14, 165, 233, 0.35); filter: brightness(1.15); }
+        .btn:active { transform: translateY(0); }
+        .btn:disabled { background: var(--text-muted); cursor: not-allowed; transform: none; box-shadow: none; opacity: 0.5; }
+        .btn-random { background: var(--success); box-shadow: 0 2px 8px rgba(52, 211, 153, 0.25); }
+        .btn-manual { background: var(--accent-dim); box-shadow: 0 2px 8px rgba(236, 72, 153, 0.25); }
+        .btn-submit { background: var(--warning); color: #1a1a2e; box-shadow: 0 2px 8px rgba(251, 191, 36, 0.25); }
+        .btn-start { background: var(--success); box-shadow: 0 2px 8px rgba(52, 211, 153, 0.25); }
+        .btn-step { background: var(--warning); color: #1a1a2e; box-shadow: 0 2px 8px rgba(251, 191, 36, 0.25); }
+        .btn-auto { background: #a78bfa; box-shadow: 0 2px 8px rgba(167, 139, 250, 0.25); }
+        .btn-pause { background: var(--text-muted); box-shadow: 0 2px 8px rgba(100, 116, 139, 0.25); }
+        .btn-reset { background: var(--danger); box-shadow: 0 2px 8px rgba(248, 113, 113, 0.25); }
+        .btn-save { background: #a78bfa; box-shadow: 0 2px 8px rgba(167, 139, 250, 0.25); }
+        .btn-load { background: #2dd4bf; box-shadow: 0 2px 8px rgba(45, 212, 191, 0.25); }
+        .btn-clear { background: var(--danger); box-shadow: 0 2px 8px rgba(248, 113, 113, 0.25); }
+
+        /* ========== 数据输入模块样式 ========== */
+        .input-panel { background-color: var(--bg-card); }
+        .input-section { display: flex; flex-direction: column; gap: 15px; }
+        .input-group { display: flex; align-items: center; gap: 10px; }
+        .input-group label { width: 100px; font-size: 14px; color: var(--text-secondary); font-weight: 500; }
+        .input-group input {
+            flex: 1; padding: 10px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px; font-size: 14px;
+            background: var(--bg-elevated); color: var(--text-primary);
+            font-family: 'Noto Sans SC', sans-serif;
+            transition: border-color 0.25s, box-shadow 0.25s;
+            outline: none;
+        }
+        .input-group input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15); }
+        .btn-group { display: flex; gap: 10px; margin-top: 10px; }
+
+        /* ========== 算法思想面板 ========== */
+        .concept-panel { background-color: var(--bg-card); }
+        .concept-content { font-size: 14px; line-height: 2; color: var(--text-secondary); }
+        .concept-content ol { padding-left: 20px; }
+        .concept-content li { margin-bottom: 6px; }
+        .concept-content b { color: var(--primary); font-weight: 700; }
+        .concept-content p b { color: var(--accent); }
+
+        /* ========== 可视化模块样式 ========== */
+        .visualization-panel { background-color: var(--bg-card); min-height: 350px; padding: 20px; }
+        .visualization-container {
+            height: 300px; display: flex; align-items: flex-end; justify-content: center;
+            gap: 8px; padding: 10px; overflow-x: auto; position: relative;
+            background: linear-gradient(180deg, transparent 0%, rgba(56, 189, 248, 0.03) 100%);
+            border-radius: 12px;
+        }
+        .bar {
+            width: 40px; min-width: 25px;
+            background: linear-gradient(180deg, #38bdf8, #0284c7);
+            position: relative;
+            transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s;
+            border-radius: 6px 6px 0 0;
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.2);
+        }
+        .bar.pivot { background: linear-gradient(180deg, #f472b6, #db2777); box-shadow: 0 0 16px rgba(244, 114, 182, 0.4); }
+        .bar.comparing { background: linear-gradient(180deg, #fbbf24, #d97706); box-shadow: 0 0 16px rgba(251, 191, 36, 0.4); }
+        .bar.completed { background: linear-gradient(180deg, #34d399, #059669); box-shadow: 0 0 16px rgba(52, 211, 153, 0.4); }
+        .bar.swapping { background: linear-gradient(180deg, #f87171, #dc2626); box-shadow: 0 0 16px rgba(248, 113, 113, 0.4); animation: barPulse 0.4s ease; }
+        @keyframes barPulse { 0%, 100% { transform: scaleX(1); } 50% { transform: scaleX(1.15); } }
+        .bar-value { position: absolute; bottom: -25px; width: 100%; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-secondary); font-family: 'JetBrains Mono', monospace; }
+        .legend { display: flex; justify-content: center; gap: 24px; margin-top: 20px; font-size: 13px; color: var(--text-secondary); }
+        .legend-item { display: flex; align-items: center; gap: 6px; }
+        .legend-color { width: 18px; height: 18px; border-radius: 4px; }
+
+        /* ========== 代码展示模块样式 ========== */
+        .code-panel { background-color: var(--bg-card); }
+        .code-container {
+            flex: 1;
+            background: #0d1117;
+            border-radius: 12px;
+            padding: 18px;
+            font-family: 'JetBrains Mono', 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.7;
+            color: #c9d1d9;
+            overflow-y: auto;
+            max-height: 400px;
+            border: 1px solid rgba(56, 189, 248, 0.08);
+        }
+        .code-line { display: flex; margin-bottom: 1px; padding: 3px 6px; border-radius: 4px; cursor: pointer; position: relative; transition: background-color 0.2s; }
+        .code-line:hover { background-color: rgba(56, 189, 248, 0.06); }
+        .line-number { width: 30px; color: var(--text-muted); text-align: right; padding-right: 15px; user-select: none; font-size: 12px; }
+        .line-code { flex: 1; white-space: pre; }
+        .keyword { color: #ff7b72; }
+        .function { color: #79c0ff; }
+        .comment { color: #8b949e; font-style: italic; }
+        .highlight { background-color: rgba(56, 189, 248, 0.1); box-shadow: inset 3px 0 0 var(--primary); }
+
+        /* ========== 功能1: 代码行标注样式 ========== */
+        .code-line .mark-icon { display: none; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: var(--accent-dim); color: white; border: none; border-radius: 50%; width: 22px; height: 22px; font-size: 12px; cursor: pointer; align-items: center; justify-content: center; line-height: 22px; text-align: center; transition: transform 0.2s, background 0.2s; }
+        .code-line .mark-icon:hover { transform: translateY(-50%) scale(1.15); }
+        .code-line:hover .mark-icon { display: flex; }
+        .code-line.user-marked { background-color: rgba(244, 114, 182, 0.1); border-left: 3px solid var(--accent); }
+        .code-line.user-marked .mark-icon { display: flex; background: var(--success); }
+        .mark-tooltip { position: absolute; left: 100%; top: 0; background: var(--bg-elevated); color: var(--text-primary); padding: 12px; border-radius: 10px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); border: 1px solid var(--border-color); width: 280px; z-index: 100; font-family: 'Noto Sans SC', sans-serif; font-size: 13px; display: none; }
+        .mark-tooltip textarea { width: 100%; height: 60px; border: 1px solid var(--border-color); border-radius: 6px; padding: 8px; font-size: 12px; resize: none; margin: 8px 0; background: var(--bg-deep); color: var(--text-primary); font-family: 'Noto Sans SC', sans-serif; }
+        .mark-tooltip textarea:focus { outline: none; border-color: var(--primary); }
+        .mark-tooltip .tooltip-btns { display: flex; gap: 6px; justify-content: flex-end; }
+        .mark-tooltip .tooltip-btns button { padding: 5px 12px; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-family: 'Noto Sans SC', sans-serif; transition: filter 0.2s; }
+        .mark-tooltip .tooltip-btns button:hover { filter: brightness(1.15); }
+        .mark-tooltip .btn-mark-save { background: var(--primary); color: white; }
+        .mark-tooltip .btn-mark-cancel { background: var(--bg-card); color: var(--text-secondary); border: 1px solid var(--border-color); }
+
+        /* ========== 执行信息面板 ========== */
+        .info-panel { background-color: var(--bg-card-alt); padding: 16px; border-radius: 12px; border: 1px solid var(--border-color); }
+        .info-container { display: flex; flex-direction: column; gap: 10px; }
+        .info-item { display: flex; }
+        .info-label { width: 100px; font-size: 13px; color: var(--text-muted); font-weight: 500; }
+        .info-value { flex: 1; font-size: 13px; font-weight: 700; color: var(--primary); font-family: 'JetBrains Mono', monospace; }
+
+        /* ========== 控制面板 ========== */
+        .control-panel { background-color: var(--bg-card-alt); padding: 16px; border-radius: 12px; border: 1px solid var(--border-color); }
+        .control-container { display: flex; flex-direction: column; gap: 15px; }
+        .control-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
+        .speed-control { display: flex; align-items: center; gap: 10px; }
+        .speed-control label { font-size: 13px; color: var(--text-secondary); font-weight: 500; }
+        .speed-slider {
+            flex: 1;
+            -webkit-appearance: none; appearance: none;
+            height: 6px; border-radius: 3px;
+            background: var(--bg-elevated);
+            outline: none;
+        }
+        .speed-slider::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none;
+            width: 18px; height: 18px; border-radius: 50%;
+            background: var(--primary);
+            cursor: pointer;
+            box-shadow: 0 0 8px rgba(56, 189, 248, 0.4);
+            transition: transform 0.2s;
+        }
+        .speed-slider::-webkit-slider-thumb:hover { transform: scale(1.2); }
+        .speed-value { width: 60px; text-align: center; font-size: 13px; font-weight: 700; color: var(--primary); font-family: 'JetBrains Mono', monospace; }
+
+        /* ========== 功能2: AI对话框样式 ========== */
+        .chat-panel { background-color: var(--bg-card); }
+        .chat-messages {
+            flex: 1; min-height: 200px; max-height: 300px; overflow-y: auto;
+            background: var(--bg-deep);
+            border-radius: 12px; padding: 14px; margin-bottom: 12px;
+            display: flex; flex-direction: column; gap: 10px;
+            border: 1px solid var(--border-color);
+        }
+        .chat-msg { padding: 10px 14px; border-radius: 14px; max-width: 85%; font-size: 13px; line-height: 1.6; word-wrap: break-word; }
+        .chat-msg.user {
+            background: linear-gradient(135deg, var(--primary-dim), #0369a1);
+            color: white; align-self: flex-end; border-bottom-right-radius: 4px;
+            box-shadow: 0 2px 8px rgba(14, 165, 233, 0.2);
+        }
+        .chat-msg.ai {
+            background: var(--bg-elevated); color: var(--text-primary);
+            align-self: flex-start; border-bottom-left-radius: 4px;
+            border: 1px solid var(--border-color);
+        }
+        .chat-msg.system {
+            background: rgba(251, 191, 36, 0.1); color: var(--warning);
+            align-self: center; font-size: 12px; text-align: center;
+            border: 1px solid rgba(251, 191, 36, 0.2); border-radius: 20px; padding: 6px 16px;
+        }
+        .chat-input-row { display: flex; gap: 8px; }
+        .chat-input {
+            flex: 1; padding: 10px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 24px; font-size: 14px; outline: none;
+            background: var(--bg-elevated); color: var(--text-primary);
+            font-family: 'Noto Sans SC', sans-serif;
+            transition: border-color 0.25s, box-shadow 0.25s;
+        }
+        .chat-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.12); }
+        .chat-send-btn {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dim));
+            color: white; border: none; border-radius: 24px; padding: 10px 24px;
+            cursor: pointer; font-size: 14px; font-family: 'Noto Sans SC', sans-serif;
+            font-weight: 500; transition: all 0.25s;
+            box-shadow: 0 2px 8px rgba(56, 189, 248, 0.25);
+        }
+        .chat-send-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(56, 189, 248, 0.35); }
+        .chat-send-btn:disabled { background: var(--text-muted); cursor: not-allowed; box-shadow: none; transform: none; }
+        .typing-indicator { font-size: 12px; color: var(--text-muted); font-style: italic; padding: 4px 0; }
+
+        /* ========== 功能3: 个性化分析面板样式 ========== */
+        .analysis-panel { background-color: var(--bg-card); }
+        .analysis-content { display: flex; flex-direction: column; gap: 12px; }
+        .analysis-section { background: var(--bg-card-alt); border-radius: 10px; padding: 14px; border: 1px solid var(--border-color); }
+        .analysis-section h4 { font-size: 13px; color: var(--primary); margin-bottom: 10px; letter-spacing: 0.5px; text-transform: uppercase; font-weight: 700; }
+        .skill-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+        .skill-bar .skill-name { width: 100px; font-size: 12px; color: var(--text-secondary); font-weight: 500; }
+        .skill-bar .bar-track { flex: 1; height: 8px; background: var(--bg-deep); border-radius: 4px; overflow: hidden; }
+        .skill-bar .bar-fill { height: 100%; border-radius: 4px; transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
+        .skill-bar .skill-val { width: 40px; font-size: 12px; text-align: right; font-weight: 700; color: var(--text-primary); font-family: 'JetBrains Mono', monospace; }
+        .recommendation-list { list-style: none; padding: 0; }
+        .recommendation-list li { padding: 10px; border-bottom: 1px solid var(--border-color); font-size: 13px; display: flex; align-items: center; gap: 8px; color: var(--text-secondary); transition: background 0.2s; }
+        .recommendation-list li:hover { background: rgba(56, 189, 248, 0.04); }
+        .recommendation-list li:last-child { border-bottom: none; }
+        .rec-tag { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 11px; color: white; font-weight: 600; letter-spacing: 0.3px; }
+        .rec-tag.easy { background: var(--success); }
+        .rec-tag.medium { background: var(--warning); color: #1a1a2e; }
+        .rec-tag.hard { background: var(--danger); }
+
+        /* ========== 性能统计模块 ========== */
+        .stats-panel { background-color: var(--bg-card); }
+        .stats-container { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; font-family: 'JetBrains Mono', monospace; font-feature-settings: 'tnum'; }
+        th, td { border: 1px solid var(--border-color); padding: 10px 14px; text-align: center; }
+        th { background: var(--bg-elevated); color: var(--primary); font-weight: 700; font-size: 12px; letter-spacing: 0.5px; text-transform: uppercase; }
+        td { color: var(--text-secondary); }
+        tr:nth-child(even) { background-color: rgba(56, 189, 248, 0.03); }
+        tr:hover { background-color: rgba(56, 189, 248, 0.06); }
+        .summary { margin-top: 16px; font-size: 13px; padding: 12px; background: var(--bg-card-alt); border-radius: 10px; border: 1px solid var(--border-color); }
+        .summary-item { display: flex; margin-bottom: 6px; }
+        .summary-label { width: 120px; font-weight: 700; color: var(--primary); font-size: 13px; }
+        .summary-value { flex: 1; font-weight: 700; color: var(--accent); font-family: 'JetBrains Mono', monospace; }
+
+        /* ========== 记事本模块 ========== */
+        .notes-panel { background-color: var(--bg-card); }
+        .notes-textarea {
+            height: 120px; width: 100%; padding: 14px;
+            border: 1px solid var(--border-color); border-radius: 10px;
+            resize: vertical; font-size: 14px;
+            background: var(--bg-deep); color: var(--text-primary);
+            font-family: 'Noto Sans SC', sans-serif;
+            transition: border-color 0.25s, box-shadow 0.25s;
+            outline: none;
+        }
+        .notes-textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.12); }
+        .notes-buttons { display: flex; gap: 10px; margin-top: 12px; }
+
+        /* ========== 完成提示 ========== */
+        .completion-message {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, var(--success), #059669);
+            color: white; padding: 24px 48px; border-radius: 16px;
+            font-size: 18px; font-weight: 700; font-family: 'Noto Sans SC', sans-serif;
+            box-shadow: 0 8px 40px rgba(52, 211, 153, 0.4), 0 0 0 1px rgba(52, 211, 153, 0.2);
+            z-index: 1000; display: none;
+            animation: fadeInOut 3s ease-in-out;
+            letter-spacing: 1px;
+        }
+        @keyframes fadeInOut { 0% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); } 20% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 80% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.95); } }
+
+        /* ========== 页面入场动画 ========== */
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .col, .row-single > .col { animation: slideUp 0.5s ease backwards; }
+        .row:nth-child(1) .col { animation-delay: 0.05s; }
+        .row:nth-child(2) .col, .row-single:nth-child(2) .col { animation-delay: 0.1s; }
+        .row:nth-child(3) .col { animation-delay: 0.15s; }
+        .row:nth-child(4) .col { animation-delay: 0.2s; }
+
+        /* ========== 滚动条 ========== */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
+
+        /* ========== 响应式 ========== */
+        @media (max-width: 768px) {
+            .row { flex-direction: column; }
+            .col-35, .col-65, .col-55, .col-45, .col-60, .col-40 { flex: 1; }
+            .visualization-container { height: 200px; }
+            .btn-group, .control-buttons, .notes-buttons { flex-wrap: wrap; }
+            .btn { flex: 1; min-width: 100px; }
+            body { padding: 12px; }
+            .page-header { flex-direction: column; gap: 12px; align-items: flex-start; }
+            .chat-messages { max-height: 200px; }
+            .code-container { max-height: 250px; font-size: 12px; }
+            .mark-tooltip { left: auto; right: 0; width: 220px; }
+        }
+
+        /* ========== 页面头部 ========== */
+        .page-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 8px; padding: 0 4px;
+        }
+        .header-left { display: flex; flex-direction: column; gap: 2px; }
+        .header-subtitle { font-size: 13px; color: var(--text-muted); font-weight: 400; letter-spacing: 0.5px; }
+        .header-right { display: flex; align-items: center; gap: 12px; }
+        .theme-toggle-btn {
+            width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--border-color);
+            background: var(--bg-card); cursor: pointer; font-size: 18px;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.25s ease; color: var(--text-primary);
+        }
+        .theme-toggle-btn:hover { border-color: var(--border-glow); transform: translateY(-1px); }
+
+        /* ========== 区域分隔 ========== */
+        .zone-divider {
+            display: flex; align-items: center; gap: 12px; padding: 8px 0;
+        }
+        .zone-divider::before, .zone-divider::after {
+            content: ''; flex: 1; height: 1px;
+            background: linear-gradient(90deg, transparent, var(--border-color), transparent);
+        }
+        .zone-label {
+            font-size: 11px; color: var(--text-muted); letter-spacing: 2px;
+            font-weight: 700; white-space: nowrap;
+        }
+
+        /* ========== 非等宽列 ========== */
+        .col-35 { flex: 0 0 35%; }
+        .col-65 { flex: 0 0 calc(65% - 20px); }
+        .col-55 { flex: 0 0 55%; }
+        .col-45 { flex: 0 0 calc(45% - 20px); }
+        .col-60 { flex: 0 0 60%; }
+        .col-40 { flex: 0 0 calc(40% - 20px); }
+
+        /* ========== 进度条 ========== */
+        .sort-progress { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+        .sort-progress-track { flex: 1; height: 4px; background: var(--bg-elevated); border-radius: 2px; overflow: hidden; }
+        .sort-progress-bar {
+            height: 100%; background: linear-gradient(90deg, var(--primary), var(--accent));
+            border-radius: 2px; transition: width 0.3s ease; width: 0%;
+        }
+        .sort-progress-text { font-size: 11px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; white-space: nowrap; min-width: 70px; text-align: right; }
+
+        /* ========== 柱状图悬停提示 ========== */
+        .bar-tooltip {
+            position: absolute; top: -32px; left: 50%; transform: translateX(-50%);
+            background: var(--bg-elevated); color: var(--text-primary);
+            padding: 3px 8px; border-radius: 6px; font-size: 11px; white-space: nowrap;
+            pointer-events: none; box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            border: 1px solid var(--border-color); z-index: 10; display: none;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .bar:hover .bar-tooltip { display: block; }
+        .bar { cursor: pointer; }
+        .bar:hover { filter: brightness(1.15); }
+
+        /* ========== 分区范围指示器 ========== */
+        .partition-range {
+            position: absolute; bottom: -4px; height: 3px;
+            background: var(--accent); border-radius: 2px;
+            transition: left 0.3s ease, width 0.3s ease; opacity: 0.7;
+        }
+
+        /* ========== Toast 通知 ========== */
+        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 2000; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+        .toast {
+            padding: 12px 20px; border-radius: 10px; font-size: 14px; color: white;
+            opacity: 0; transform: translateX(60px); transition: all 0.3s ease;
+            pointer-events: auto; font-family: 'Noto Sans SC', sans-serif;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+        }
+        .toast-visible { opacity: 1; transform: translateX(0); }
+        .toast-info { background: var(--primary); }
+        .toast-warning { background: var(--warning); color: #1a1a2e; }
+        .toast-error { background: var(--danger); }
+        .toast-success { background: var(--success); }
+
+        /* ========== 快捷键提示 ========== */
+        .shortcuts-hint { font-size: 11px; color: var(--text-muted); text-align: center; margin-top: 8px; }
+        .shortcuts-hint kbd {
+            display: inline-block; padding: 1px 6px; border-radius: 4px;
+            background: var(--bg-elevated); border: 1px solid var(--border-color);
+            font-family: 'JetBrains Mono', monospace; font-size: 10px;
+        }
+
+        /* ========== 加载动画 ========== */
+        .loading-shimmer {
+            background: linear-gradient(90deg, transparent 0%, rgba(56,189,248,0.05) 50%, transparent 100%);
+            background-size: 200% 100%; animation: shimmer 1.5s infinite;
+        }
+        @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="page-header">
+            <div class="header-left">
+                <h1 class="main-title">快速排序算法</h1>
+                <span class="header-subtitle">基于知识图谱的算法学习推荐系统</span>
+            </div>
+            <div class="header-right">
+                <button id="theme-toggle" class="theme-toggle-btn" title="切换主题"><span class="theme-icon">☽</span></button>
+            </div>
+        </header>
+        <div class="zone-divider"><span class="zone-label">学习区</span></div>
+        <!-- ====== 第一层：数据输入 + 快速排序思想 ====== -->
+        <div class="row">
+            <div class="col col-35 input-panel">
+                <div class="panel-title">数据输入模块</div>
+                <div class="input-section">
+                    <div class="input-group">
+                        <label for="element-count">元素个数:</label>
+                        <input type="number" id="element-count" min="3" max="20" value="8">
+                    </div>
+                    <div class="btn-group">
+                        <button id="random-btn" class="btn btn-random">随机生成数据</button>
+                        <button id="manual-btn" class="btn btn-manual">手动输入数据</button>
+                    </div>
+                    <div id="manual-input-container" style="display: none;">
+                        <div class="input-group">
+                            <label for="manual-input">输入数据:</label>
+                            <input type="text" id="manual-input" placeholder="例如: 5,3,8,1,2">
+                        </div>
+                        <button id="submit-btn" class="btn btn-submit" style="margin-top:8px;">提交数据</button>
+                    </div>
+                </div>
+            </div>
+            <div class="col col-65 concept-panel">
+                <div class="panel-title">快速排序算法思想</div>
+                <div class="concept-content">
+                    <p>快速排序是一种高效的分治排序算法，由Tony Hoare于1960年提出。其核心思想是：</p>
+                    <ol>
+                        <li><b>选择基准(Pivot)：</b>从数组中选取一个元素作为基准值。</li>
+                        <li><b>分区(Partition)：</b>将数组分为两部分，左边的元素都小于基准，右边的元素都大于基准。</li>
+                        <li><b>递归排序：</b>对左右两个子数组分别递归执行快速排序。</li>
+                        <li><b>合并：</b>由于是原地排序，分区完成后数组自然有序。</li>
+                    </ol>
+                    <p style="margin-top:8px;">平均时间复杂度: <b>O(n log n)</b>，最坏: <b>O(n²)</b>，空间复杂度: <b>O(log n)</b></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ====== 第二层：算法可视化 ====== -->
+        <div class="row-single">
+            <div class="col visualization-panel">
+                <div class="panel-title">算法可视化模块</div>
+                <div class="sort-progress">
+                    <div class="sort-progress-track"><div class="sort-progress-bar" id="sort-progress-bar"></div></div>
+                    <span class="sort-progress-text" id="sort-progress-text">0 / 0 步</span>
+                </div>
+                <div id="visualization" class="visualization-container"></div>
+                <div class="legend">
+                    <div class="legend-item"><div class="legend-color" style="background:linear-gradient(180deg,#38bdf8,#0284c7);"></div><span>未处理</span></div>
+                    <div class="legend-item"><div class="legend-color" style="background:linear-gradient(180deg,#f472b6,#db2777);"></div><span>基准(Pivot)</span></div>
+                    <div class="legend-item"><div class="legend-color" style="background:linear-gradient(180deg,#fbbf24,#d97706);"></div><span>正在比较</span></div>
+                    <div class="legend-item"><div class="legend-color" style="background:linear-gradient(180deg,#f87171,#dc2626);"></div><span>交换</span></div>
+                    <div class="legend-item"><div class="legend-color" style="background:linear-gradient(180deg,#34d399,#059669);"></div><span>已就位</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="zone-divider"><span class="zone-label">练习区</span></div>
+        <!-- ====== 第三层：代码展示(含标注功能) + 控制面板 ====== -->
+        <div class="row">
+            <div class="col col-55 code-panel">
+                <div class="panel-title">算法代码模块 <span style="font-size:12px;color:var(--accent);font-weight:normal;">（点击行末 ? 标记疑问）</span></div>
+                <div class="code-container" id="code-container">
+                    <div class="code-line" data-line="1" data-knowledge="分治思想"><div class="line-number">1</div><div class="line-code"><span class="comment">// 快速排序主函数：采用分治策略，递归地将数组排序</span></div><button class="mark-icon" title="标记疑问">?</button></div>
+                    <div class="code-line" data-line="2" data-knowledge="分治思想"><div class="line-number">2</div><div class="line-code"><span class="keyword">function</span> <span class="function">quickSort</span>(arr, low, high) {</div><button class="mark-icon" title="标记疑问">?</button></div>
+                    <div class="code-line" data-line="3" data-knowledge="递归调用"><div class="line-number">3</div><div class="line-code">  <span class="keyword">if</span> (low &lt; high) { <span class="comment">// 递归终止条件：子数组长度大于1</span></div><button class="mark-icon" title="标记疑问">?</button></div>
+                    <div class="code-line" data-line="4" data-knowledge="分区操作"><div class="line-number">4</div><div class="line-code">    <span class="keyword">let</span> pi = <span class="function">partition</span>(arr, low, high); <span class="comment">// 分区，返回基准的最终位置</span></div><button class="mark-icon" title="标记疑问">?</button></div>
+                    <div class="code-line" data-line="5" data-knowledge="递归调用"><div class="line-number">5</div><div class="line-code">    <span class="function">quickSort</span>(arr, low, pi - 1);  <span class="comment">// 递归排序基准左边的子数组</span></div><button class="mark-icon" title="标记疑问">?</button></div>
+                    <div class="code-line" data-line="6" data-knowledge="递归调用"><div class="line-number">6</div><div class="line-code">    <span class="function">quickSort</span>(arr, pi + 1, high); <span class="comment">// 递归排序基准右边的子数组</span></div><button class="mark-icon" title="标记疑问">?</button></div>
+                    <div class="code-line" data-line="7" data-knowledge="分治思想"><div class="line-number">7</div><div class="line-code">  }</div><button class="mark-icon" title="标记疑问">?</button></div>
+                    <div class="code-line" data-line="8" data-knowledge="分治思想"><div class="line-number">8</div><div class="line-code">}</div><button class="mark-icon" title="标记疑问">?</button></div>
+                    <div class="code-line" data-line="9" data-knowledge="分区操作"><div class="line-number">9</div><div class="line-code"></div><button class="mark-icon" title="标记疑问">?</button></div>
+                    <div class="code-line" data-line="10" data-knowledge="分区操作"><div class="line-number">10</div><div class="line-code"><span class="comment">// 分区函数：选最后一个元素为基准，将小于基准的放左边，大于的放右边</span></div><button class="mark-icon" title="标记疑问">?</button></div>
+                    <div class="code-line" data-line="11" data-knowledge="基准选择"><div class="line-number">11</div><div class="line-code"><span class="keyword">function</span> <span class="function">partition</span>(arr, low, high) {</div><button class="mark-icon" title="标记疑问">?</button></div>
+                    <div class="code-line" data-line="12" data-knowledge="基准选择"><div class="line-number">12</div><div class="line-code">  <span class="keyword">let</span> pivot = arr[high]; <span class="comment">// 选择最后一个元素作为基准值</span></div><button class="mark-icon" title="标记疑问">?</button></div>
+                    <div class="code-line" data-line="13" data-knowledge="分区操作"><div class="line-number">13</div><div class="line-code">  <span class="keyword">let</span> i = low - 1; <span class="comment">// i 指向小于基准区域的末尾</span></div><button class="mark-icon" title="标记疑问">?</button></div>
+                    <div class="code-line" data-line="14" data-knowledge="分区操作"><div class="line-number">14</div><div class="line-code">  <span class="keyword">for</span> (<span class="keyword">let</span> j = low; j &lt; high; j++) { <span class="comment">// 遍历 low 到 high-1</span></div><button class="mark-icon" title="标记疑问">?</button></div>
+                    <div class="code-line" data-line="15" data-knowledge="分区操作"><div class="line-number">15</div><div class="line-code">    <span class="keyword">if</span> (arr[j] &lt;= pivot) { <span class="comment">// 当前元素小于等于基准</span></div><button class="mark-icon" title="标记疑问">?</button></div>
+                    <div class="code-line" data-line="16" data-knowledge="分区操作"><div class="line-number">16</div><div class="line-code">      i++; <span class="comment">// 扩大小于基准的区域</span></div><button class="mark-icon" title="标记疑问">?</button></div>
+                    <div class="code-line" data-line="17" data-knowledge="分区操作"><div class="line-number">17</div><div class="line-code">      [arr[i], arr[j]] = [arr[j], arr[i]]; <span class="comment">// 交换到左边区域</span></div><button class="mark-icon" title="标记疑问">?</button></div>
+                    <div class="code-line" data-line="18" data-knowledge="分区操作"><div class="line-number">18</div><div class="line-code">    }</div><button class="mark-icon" title="标记疑问">?</button></div>
+                    <div class="code-line" data-line="19" data-knowledge="分区操作"><div class="line-number">19</div><div class="line-code">  }</div><button class="mark-icon" title="标记疑问">?</button></div>
+                    <div class="code-line" data-line="20" data-knowledge="基准选择"><div class="line-number">20</div><div class="line-code">  [arr[i+1], arr[high]] = [arr[high], arr[i+1]]; <span class="comment">// 将基准放到正确位置</span></div><button class="mark-icon" title="标记疑问">?</button></div>
+                    <div class="code-line" data-line="21" data-knowledge="基准选择"><div class="line-number">21</div><div class="line-code">  <span class="keyword">return</span> i + 1; <span class="comment">// 返回基准的最终索引</span></div><button class="mark-icon" title="标记疑问">?</button></div>
+                    <div class="code-line" data-line="22" data-knowledge="分区操作"><div class="line-number">22</div><div class="line-code">}</div><button class="mark-icon" title="标记疑问">?</button></div>
+                </div>
+            </div>
+            <div class="col col-45" style="display:flex;flex-direction:column;gap:15px;">
+                <div class="info-panel">
+                    <div class="panel-title">当前执行信息</div>
+                    <div class="info-container">
+                        <div class="info-item"><div class="info-label">状态:</div><div class="info-value" id="status">未开始</div></div>
+                        <div class="info-item"><div class="info-label">当前操作:</div><div class="info-value" id="current-op">-</div></div>
+                        <div class="info-item"><div class="info-label">执行行号:</div><div class="info-value" id="current-line">-</div></div>
+                        <div class="info-item"><div class="info-label">递归深度:</div><div class="info-value" id="recursion-depth">0</div></div>
+                        <div class="info-item"><div class="info-label">运行时间:</div><div class="info-value" id="run-time">0 ms</div></div>
+                    </div>
+                </div>
+                <div class="control-panel">
+                    <div class="panel-title">算法控制模块</div>
+                    <div class="control-container">
+                        <div class="control-buttons">
+                            <button id="start-btn" class="btn btn-start">开始</button>
+                            <button id="step-btn" class="btn btn-step" disabled>单步运行</button>
+                            <button id="auto-btn" class="btn btn-auto" disabled>自动运行</button>
+                            <button id="pause-btn" class="btn btn-pause" disabled>暂停</button>
+                            <button id="reset-btn" class="btn btn-reset">重置</button>
+                        </div>
+                        <div class="speed-control">
+                            <label for="speed-slider">执行速度:</label>
+                            <input type="range" id="speed-slider" min="100" max="2000" step="100" value="500" class="speed-slider">
+                            <span id="speed-value" class="speed-value">500ms</span>
+                        </div>
+                    </div>
+                    <div class="shortcuts-hint"><kbd>Space</kbd> 单步 <kbd>→</kbd> 下一步 <kbd>P</kbd> 暂停 <kbd>R</kbd> 重置 <kbd>↑↓</kbd> 调速</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ====== 第四层：AI对话 + 个性化分析 ====== -->
+        <div class="row">
+            <div class="col col-45 chat-panel">
+                <div class="panel-title">AI 智能助手</div>
+                <div class="chat-messages" id="chat-messages">
+                    <div class="chat-msg system">你好！我是算法学习助手，可以回答你关于快速排序的任何问题。</div>
+                </div>
+                <div class="chat-input-row">
+                    <input type="text" class="chat-input" id="chat-input" placeholder="输入你的问题..." />
+                    <button class="chat-send-btn" id="chat-send-btn">发送</button>
+                </div>
+            </div>
+            <div class="col col-55 analysis-panel">
+                <div class="panel-title">个性化学习分析</div>
+                <div class="analysis-content" id="analysis-content">
+                    <div class="analysis-section">
+                        <h4>知识掌握度</h4>
+                        <div id="skill-bars">
+                            <div class="skill-bar"><span class="skill-name">分治思想</span><div class="bar-track"><div class="bar-fill" style="width:0%;background:#34d399;"></div></div><span class="skill-val">0%</span></div>
+                            <div class="skill-bar"><span class="skill-name">基准选择</span><div class="bar-track"><div class="bar-fill" style="width:0%;background:#38bdf8;"></div></div><span class="skill-val">0%</span></div>
+                            <div class="skill-bar"><span class="skill-name">分区操作</span><div class="bar-track"><div class="bar-fill" style="width:0%;background:#fbbf24;"></div></div><span class="skill-val">0%</span></div>
+                            <div class="skill-bar"><span class="skill-name">递归调用</span><div class="bar-track"><div class="bar-fill" style="width:0%;background:#a78bfa;"></div></div><span class="skill-val">0%</span></div>
+                            <div class="skill-bar"><span class="skill-name">复杂度分析</span><div class="bar-track"><div class="bar-fill" style="width:0%;background:#f472b6;"></div></div><span class="skill-val">0%</span></div>
+                        </div>
+                    </div>
+                    <div class="analysis-section">
+                        <h4>学习建议</h4>
+                        <ul class="recommendation-list" id="recommendation-list">
+                            <li>请先开始排序演示，系统将根据你的学习行为生成个性化建议。</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="zone-divider"><span class="zone-label">回顾区</span></div>
+        <!-- ====== 第五层：性能统计 + 笔记 ====== -->
+        <div class="row">
+            <div class="col col-60 stats-panel">
+                <div class="panel-title">算法性能统计</div>
+                <div class="stats-container">
+                    <table id="stats-table">
+                        <thead><tr><th>序号</th><th>分区范围</th><th>基准值</th><th>比较次数</th><th>交换次数</th><th>递归深度</th></tr></thead>
+                        <tbody id="stats-body"></tbody>
+                    </table>
+                    <div class="summary" id="summary"></div>
+                </div>
+            </div>
+            <div class="col col-40 notes-panel">
+                <div class="panel-title">学习笔记</div>
+                <textarea id="notes-textarea" class="notes-textarea" placeholder="在这里记录你的学习笔记..."></textarea>
+                <div class="notes-buttons">
+                    <button id="save-btn" class="btn btn-save">保存笔记</button>
+                    <button id="load-btn" class="btn btn-load">加载笔记</button>
+                    <button id="clear-btn" class="btn btn-clear">清空笔记</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="completion-message" class="completion-message">排序已完成！</div>
+    <script>
+    /* ============================================================
+       快速排序可视化 - IIFE 模块化架构
+       模块: State, DOM, Toast, Theme, Sorting, Viz, Controls,
+             Chat, Analysis, Marking, Notes, Keyboard
+       ============================================================ */
+    ;(function() {
+    'use strict';
+
+    // ==================== State 模块 ====================
+    const State = {
+        originalArray: [],
+        currentArray: [],
+        animationSteps: [],
+        currentStep: 0,
+        isAutoRunning: false,
+        animationInterval: null,
+        startTime: 0,
+        isStarted: false,
+        completedIndicesSet: new Set(),
+        userMarks: {},
+        chatHistory: [],
+        activeTooltip: null,
+        userProfile: {
+            totalStepsViewed: 0,
+            markedLines: [],
+            questionsAsked: 0,
+            questionTopics: [],
+            completedRuns: 0,
+            skillScores: {
+                '\u5206\u6cbb\u601d\u60f3': 0, '\u57fa\u51c6\u9009\u62e9': 0,
+                '\u5206\u533a\u64cd\u4f5c': 0, '\u9012\u5f52\u8c03\u7528': 0,
+                '\u590d\u6742\u5ea6\u5206\u6790': 0
+            }
+        }
+    };
+
+    // ==================== DOM 模块 ====================
+    const DOM = {
+        $: id => document.getElementById(id),
+        refs: {},
+        init() {
+            const $ = this.$;
+            this.refs = {
+                visualization: $('visualization'),
+                startBtn: $('start-btn'),
+                stepBtn: $('step-btn'),
+                autoBtn: $('auto-btn'),
+                pauseBtn: $('pause-btn'),
+                resetBtn: $('reset-btn'),
+                speedSlider: $('speed-slider'),
+                speedValue: $('speed-value'),
+                status: $('status'),
+                currentOp: $('current-op'),
+                currentLine: $('current-line'),
+                recursionDepth: $('recursion-depth'),
+                runTime: $('run-time'),
+                statsBody: $('stats-body'),
+                summary: $('summary'),
+                notesTextarea: $('notes-textarea'),
+                chatMessages: $('chat-messages'),
+                chatInput: $('chat-input'),
+                chatSendBtn: $('chat-send-btn'),
+                completionMessage: $('completion-message'),
+                codeContainer: $('code-container'),
+                progressBar: $('sort-progress-bar'),
+                progressText: $('sort-progress-text'),
+                toastContainer: $('toast-container')
+            };
+            this.codeLines = document.querySelectorAll('.code-line');
+        }
+    };
+
+    // ==================== Toast 模块 ====================
+    const Toast = {
+        show(message, type) {
+            type = type || 'info';
+            var container = DOM.refs.toastContainer;
+            if (!container) return;
+            var el = document.createElement('div');
+            el.className = 'toast toast-' + type;
+            el.textContent = message;
+            container.appendChild(el);
+            requestAnimationFrame(function() {
+                el.classList.add('toast-visible');
+            });
+            setTimeout(function() {
+                el.classList.remove('toast-visible');
+                setTimeout(function() { el.remove(); }, 300);
+            }, 3000);
+        },
+        info(msg) { this.show(msg, 'info'); },
+        success(msg) { this.show(msg, 'success'); },
+        warning(msg) { this.show(msg, 'warning'); },
+        error(msg) { this.show(msg, 'error'); }
+    };
+
+    // ==================== Theme 模块 ====================
+    const Theme = {
+        init() {
+            var saved = localStorage.getItem('qs-theme');
+            if (saved) {
+                document.documentElement.setAttribute('data-theme', saved);
+            }
+            this.updateIcon();
+            var btn = DOM.$('theme-toggle');
+            if (btn) {
+                btn.addEventListener('click', this.toggle.bind(this));
+            }
+        },
+        toggle() {
+            var current = document.documentElement.getAttribute('data-theme');
+            var next = current === 'light' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('qs-theme', next);
+            this.updateIcon();
+        },
+        updateIcon() {
+            var btn = DOM.$('theme-toggle');
+            if (!btn) return;
+            var icon = btn.querySelector('.theme-icon');
+            if (!icon) return;
+            var isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+            icon.textContent = isDark ? '\u263D' : '\u2600';
+        }
+    };
+
+    // ==================== Sorting 模块 ====================
+    const Sorting = {
+        generateSteps(arr) {
+            var totalComparisons = 0, totalSwaps = 0, partitionCount = 0;
+            var steps = [];
+            var completed = new Set();
+
+            steps.push({
+                array: arr.slice(), type: 'init', line: 1, depth: 0,
+                op: '\u521d\u59cb\u5316\uff1a\u51c6\u5907\u5bf9\u6570\u7ec4\u8fdb\u884c\u5feb\u901f\u6392\u5e8f',
+                states: {}, range: [0, arr.length - 1]
+            });
+
+            function qsort(low, high, depth) {
+                steps.push({
+                    array: arr.slice(), type: 'recurse', line: 2, depth: depth,
+                    op: '\u8fdb\u5165 quickSort(arr, ' + low + ', ' + high + ')\uff0c\u9012\u5f52\u6df1\u5ea6=' + depth,
+                    states: { completed: Array.from(completed) }, range: [low, high]
+                });
+
+                if (low < high) {
+                    steps.push({
+                        array: arr.slice(), type: 'check', line: 3, depth: depth,
+                        op: '\u5224\u65ad low(' + low + ') < high(' + high + ')\uff0c\u6761\u4ef6\u6210\u7acb\uff0c\u5f00\u59cb\u5206\u533a',
+                        states: { completed: Array.from(completed) }, range: [low, high]
+                    });
+
+                    var pivot = arr[high];
+                    partitionCount++;
+                    var partId = partitionCount;
+                    var partComparisons = 0, partSwaps = 0;
+
+                    steps.push({
+                        array: arr.slice(), type: 'pivot', line: 12, depth: depth,
+                        op: '\u9009\u62e9\u57fa\u51c6 pivot = arr[' + high + '] = ' + pivot,
+                        states: { pivot: [high], completed: Array.from(completed) },
+                        range: [low, high]
+                    });
+
+                    var i = low - 1;
+                    steps.push({
+                        array: arr.slice(), type: 'init-i', line: 13, depth: depth,
+                        op: '\u521d\u59cb\u5316 i = ' + low + ' - 1 = ' + i,
+                        states: { pivot: [high], completed: Array.from(completed) },
+                        range: [low, high]
+                    });
+
+                    for (var j = low; j < high; j++) {
+                        partComparisons++;
+                        totalComparisons++;
+                        var leq = arr[j] <= pivot;
+
+                        steps.push({
+                            array: arr.slice(), type: 'compare', line: 15, depth: depth,
+                            op: '\u6bd4\u8f83 arr[' + j + ']=' + arr[j] + ' <= pivot(' + pivot + ') ? ' + (leq ? '\u662f' : '\u5426'),
+                            states: { pivot: [high], comparing: [j], completed: Array.from(completed) },
+                            range: [low, high]
+                        });
+
+                        if (leq) {
+                            i++;
+                            if (i !== j) {
+                                steps.push({
+                                    array: arr.slice(), type: 'swap', line: 17, depth: depth,
+                                    op: '\u4ea4\u6362 arr[' + i + ']=' + arr[i] + ' \u548c arr[' + j + ']=' + arr[j],
+                                    states: { pivot: [high], swapping: [i, j], completed: Array.from(completed) },
+                                    range: [low, high]
+                                });
+                                var tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+                                partSwaps++;
+                                totalSwaps++;
+                                steps.push({
+                                    array: arr.slice(), type: 'after-swap', line: 17, depth: depth,
+                                    op: '\u4ea4\u6362\u5b8c\u6210\uff0c\u73b0\u5728 arr[' + i + ']=' + arr[i] + ', arr[' + j + ']=' + arr[j],
+                                    states: { pivot: [high], completed: Array.from(completed) },
+                                    range: [low, high]
+                                });
+                            }
+                        }
+                    }
+
+                    var pivotFinalPos = i + 1;
+                    if (pivotFinalPos !== high) {
+                        steps.push({
+                            array: arr.slice(), type: 'swap', line: 20, depth: depth,
+                            op: '\u5c06\u57fa\u51c6\u653e\u5230\u6b63\u786e\u4f4d\u7f6e\uff1a\u4ea4\u6362 arr[' + pivotFinalPos + ']=' + arr[pivotFinalPos] + ' \u548c arr[' + high + ']=' + arr[high],
+                            states: { swapping: [pivotFinalPos, high], completed: Array.from(completed) },
+                            range: [low, high]
+                        });
+                        var tmp2 = arr[pivotFinalPos]; arr[pivotFinalPos] = arr[high]; arr[high] = tmp2;
+                        totalSwaps++;
+                        partSwaps++;
+                    }
+
+                    completed.add(pivotFinalPos);
+                    steps.push({
+                        array: arr.slice(), type: 'partition-done', line: 21, depth: depth,
+                        op: '\u5206\u533a\u5b8c\u6210\uff01\u57fa\u51c6 ' + pivot + ' \u5c31\u4f4d\u4e8e\u7d22\u5f15 ' + pivotFinalPos,
+                        states: { pivot: [pivotFinalPos], completed: Array.from(completed) },
+                        range: [low, high],
+                        stats: { id: partId, range: '[' + low + ', ' + high + ']', pivot: pivot,
+                                 comparisons: partComparisons, swaps: partSwaps, depth: depth }
+                    });
+
+                    qsort(low, pivotFinalPos - 1, depth + 1);
+                    qsort(pivotFinalPos + 1, high, depth + 1);
+
+                } else if (low === high) {
+                    completed.add(low);
+                    steps.push({
+                        array: arr.slice(), type: 'single', line: 3, depth: depth,
+                        op: '\u5b50\u6570\u7ec4\u53ea\u6709\u4e00\u4e2a\u5143\u7d20 arr[' + low + ']=' + arr[low] + '\uff0c\u5df2\u5c31\u4f4d',
+                        states: { completed: Array.from(completed) }, range: [low, high]
+                    });
+                } else {
+                    steps.push({
+                        array: arr.slice(), type: 'empty', line: 3, depth: depth,
+                        op: 'low(' + low + ') >= high(' + high + ')\uff0c\u7a7a\u5b50\u6570\u7ec4\uff0c\u8fd4\u56de',
+                        states: { completed: Array.from(completed) }, range: [low, high]
+                    });
+                }
+            }
+
+            qsort(0, arr.length - 1, 0);
+
+            var allIdx = [];
+            for (var k = 0; k < arr.length; k++) allIdx.push(k);
+            steps.push({
+                array: arr.slice(), type: 'complete', line: 8, depth: 0,
+                op: '\u6392\u5e8f\u5b8c\u6210\uff01\u6240\u6709\u5143\u7d20\u5df2\u5c31\u4f4d',
+                states: { completed: allIdx },
+                range: [0, arr.length - 1],
+                totalComparisons: totalComparisons,
+                totalSwaps: totalSwaps
+            });
+
+            State.animationSteps = steps;
+        }
+    };
+
+    // ==================== Viz 模块 ====================
+    const Viz = {
+        renderBars(states) {
+            states = states || {};
+            var container = DOM.refs.visualization;
+            if (!container) return;
+            var arr = State.currentArray;
+            if (arr.length === 0) { container.innerHTML = ''; return; }
+
+            var maxVal = Math.max.apply(null, arr.concat([10]));
+            var containerH = container.clientHeight || 280;
+            var frag = document.createDocumentFragment();
+
+            for (var idx = 0; idx < arr.length; idx++) {
+                var val = arr[idx];
+                var barH = (val / maxVal) * (containerH - 40);
+                var bar = document.createElement('div');
+                bar.className = 'bar';
+                bar.style.height = barH + 'px';
+
+                if (states.completed && states.completed.indexOf(idx) !== -1) bar.classList.add('completed');
+                if (states.pivot && states.pivot.indexOf(idx) !== -1) bar.classList.add('pivot');
+                if (states.comparing && states.comparing.indexOf(idx) !== -1) bar.classList.add('comparing');
+                if (states.swapping && states.swapping.indexOf(idx) !== -1) bar.classList.add('swapping');
+
+                // 柱状图悬停提示
+                var tooltip = document.createElement('div');
+                tooltip.className = 'bar-tooltip';
+                tooltip.textContent = 'idx:' + idx + ' val:' + val;
+                bar.appendChild(tooltip);
+
+                var label = document.createElement('div');
+                label.className = 'bar-value';
+                label.textContent = val;
+                bar.appendChild(label);
+                frag.appendChild(bar);
+            }
+
+            container.innerHTML = '';
+            container.appendChild(frag);
+
+            // 分区范围指示器
+            if (states.range) {
+                this.showPartitionRange(container, states.range, arr.length);
+            }
+        },
+
+        showPartitionRange(container, range, total) {
+            if (!range || range.length < 2) return;
+            var low = range[0], high = range[1];
+            if (low > high || low < 0) return;
+            var bars = container.querySelectorAll('.bar');
+            if (bars.length === 0) return;
+            var firstBar = bars[low];
+            var lastBar = bars[high];
+            if (!firstBar || !lastBar) return;
+            var indicator = document.createElement('div');
+            indicator.className = 'partition-range';
+            indicator.style.left = firstBar.offsetLeft + 'px';
+            indicator.style.width = (lastBar.offsetLeft + lastBar.offsetWidth - firstBar.offsetLeft) + 'px';
+            container.appendChild(indicator);
+        },
+
+        updateProgress() {
+            var bar = DOM.refs.progressBar;
+            var text = DOM.refs.progressText;
+            if (!bar || !text) return;
+            var total = State.animationSteps.length;
+            var current = State.currentStep;
+            var pct = total > 0 ? Math.round((current / total) * 100) : 0;
+            bar.style.width = pct + '%';
+            text.textContent = current + ' / ' + total + ' \u6b65';
+        },
+
+        highlightCodeLine(lineNum) {
+            var lines = DOM.codeLines;
+            for (var i = 0; i < lines.length; i++) {
+                lines[i].classList.remove('highlight');
+            }
+            if (lineNum >= 1 && lineNum <= lines.length) {
+                var target = lines[lineNum - 1];
+                target.classList.add('highlight');
+                target.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            }
+        },
+
+        resetCodeHighlight() {
+            var lines = DOM.codeLines;
+            for (var i = 0; i < lines.length; i++) {
+                lines[i].classList.remove('highlight');
+            }
+        },
+
+        addStatsRow(stats) {
+            var row = document.createElement('tr');
+            row.innerHTML = '<td>' + stats.id + '</td><td>' + stats.range + '</td><td>' + stats.pivot + '</td>' +
+                '<td>' + stats.comparisons + '</td><td>' + stats.swaps + '</td><td>' + stats.depth + '</td>';
+            DOM.refs.statsBody.appendChild(row);
+        },
+
+        updateSummary(comparisons, swaps) {
+            DOM.refs.summary.innerHTML =
+                '<div class="summary-item"><div class="summary-label">\u603b\u6bd4\u8f83\u6b21\u6570:</div><div class="summary-value">' + comparisons + '</div></div>' +
+                '<div class="summary-item"><div class="summary-label">\u603b\u4ea4\u6362\u6b21\u6570:</div><div class="summary-value">' + swaps + '</div></div>' +
+                '<div class="summary-item"><div class="summary-label">\u6570\u7ec4\u5927\u5c0f:</div><div class="summary-value">' + State.originalArray.length + '</div></div>';
+        },
+
+        showCompletion() {
+            var el = DOM.refs.completionMessage;
+            if (!el) return;
+            el.style.display = 'block';
+            setTimeout(function() { el.style.display = 'none'; }, 3000);
+        },
+
+        updateInfo(step) {
+            DOM.refs.status.textContent = '\u6267\u884c\u4e2d';
+            DOM.refs.currentOp.textContent = step.op;
+            DOM.refs.currentLine.textContent = step.line;
+            DOM.refs.recursionDepth.textContent = step.depth || 0;
+            DOM.refs.runTime.textContent = (Date.now() - State.startTime) + ' ms';
+        }
+    };
+
+    // ==================== Controls 模块 ====================
+    const Controls = {
+        generateRandomData() {
+            var count = parseInt(DOM.$('element-count').value);
+            if (isNaN(count) || count < 3 || count > 20) {
+                Toast.warning('\u8bf7\u8f93\u51653\u523020\u4e4b\u95f4\u7684\u6570\u5b57');
+                return;
+            }
+            State.originalArray = [];
+            for (var i = 0; i < count; i++) {
+                State.originalArray.push(Math.floor(Math.random() * 90) + 10);
+            }
+            this.setupVisualization();
+        },
+
+        toggleManualInput() {
+            var c = DOM.$('manual-input-container');
+            c.style.display = c.style.display === 'none' ? 'block' : 'none';
+        },
+
+        submitManualData() {
+            var text = DOM.$('manual-input').value.trim();
+            if (!text) { Toast.warning('\u8bf7\u8f93\u5165\u6570\u636e'); return; }
+            var arr = text.split(',').map(function(s) { return parseInt(s.trim()); });
+            if (arr.some(isNaN) || arr.length < 3 || arr.length > 20) {
+                Toast.warning('\u8bf7\u8f93\u51653\u523020\u4e2a\u6709\u6548\u6570\u5b57\uff0c\u7528\u9017\u53f7\u5206\u9694');
+                return;
+            }
+            State.originalArray = arr;
+            DOM.$('element-count').value = arr.length;
+            DOM.$('manual-input-container').style.display = 'none';
+            this.setupVisualization();
+        },
+
+        setupVisualization() {
+            if (State.originalArray.length === 0) return;
+            State.currentArray = State.originalArray.slice();
+            State.animationSteps = [];
+            State.currentStep = 0;
+            State.isStarted = false;
+            State.completedIndicesSet = new Set();
+
+            Sorting.generateSteps(State.originalArray.slice());
+
+            Viz.renderBars();
+            Viz.resetCodeHighlight();
+            Viz.updateProgress();
+            DOM.refs.status.textContent = '\u51c6\u5907\u5c31\u7eea';
+            DOM.refs.currentOp.textContent = '-';
+            DOM.refs.currentLine.textContent = '-';
+            DOM.refs.recursionDepth.textContent = '0';
+            DOM.refs.runTime.textContent = '0 ms';
+            DOM.refs.statsBody.innerHTML = '';
+            DOM.refs.summary.innerHTML = '';
+
+            DOM.refs.startBtn.disabled = false;
+            DOM.refs.stepBtn.disabled = true;
+            DOM.refs.autoBtn.disabled = true;
+            DOM.refs.pauseBtn.disabled = true;
+
+            // 平滑滚动到可视化区域
+            DOM.refs.visualization.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        },
+
+        startSorting() {
+            if (State.originalArray.length === 0) {
+                Toast.warning('\u8bf7\u5148\u751f\u6210\u6216\u8f93\u5165\u6570\u636e');
+                return;
+            }
+            State.isStarted = true;
+            State.startTime = Date.now();
+            DOM.refs.startBtn.disabled = true;
+            DOM.refs.stepBtn.disabled = false;
+            DOM.refs.autoBtn.disabled = false;
+        },
+
+        stepForward() {
+            if (!State.isStarted) {
+                Toast.warning('\u8bf7\u5148\u70b9\u51fb\u201c\u5f00\u59cb\u201d\u6309\u94ae');
+                return;
+            }
+            if (State.currentStep >= State.animationSteps.length) {
+                DOM.refs.status.textContent = '\u6392\u5e8f\u5df2\u5b8c\u6210';
+                Viz.showCompletion();
+                return;
+            }
+
+            var step = State.animationSteps[State.currentStep];
+            State.currentArray = step.array.slice();
+
+            Viz.updateInfo(step);
+            Viz.highlightCodeLine(step.line);
+
+            // 渲染柱状图，传入range用于分区指示器
+            var renderStates = step.states || {};
+            if (step.range) renderStates.range = step.range;
+            Viz.renderBars(renderStates);
+
+            if (step.type === 'partition-done' && step.stats) {
+                Viz.addStatsRow(step.stats);
+            }
+
+            if (step.type === 'complete') {
+                DOM.refs.stepBtn.disabled = true;
+                DOM.refs.autoBtn.disabled = true;
+                DOM.refs.pauseBtn.disabled = true;
+                Viz.showCompletion();
+                Viz.updateSummary(step.totalComparisons, step.totalSwaps);
+                State.userProfile.completedRuns++;
+                Analysis.update();
+            }
+
+            State.userProfile.totalStepsViewed++;
+            State.currentStep++;
+            Viz.updateProgress();
+        },
+
+        startAutoRun() {
+            if (!State.isStarted || State.isAutoRunning) return;
+            State.isAutoRunning = true;
+            DOM.refs.stepBtn.disabled = true;
+            DOM.refs.autoBtn.disabled = true;
+            DOM.refs.pauseBtn.disabled = false;
+            var speed = parseInt(DOM.refs.speedSlider.value);
+            var self = this;
+            State.animationInterval = setInterval(function() {
+                self.stepForward();
+                if (State.currentStep >= State.animationSteps.length) self.pauseAutoRun();
+            }, speed);
+        },
+
+        pauseAutoRun() {
+            if (!State.isAutoRunning) return;
+            clearInterval(State.animationInterval);
+            State.isAutoRunning = false;
+            if (State.currentStep < State.animationSteps.length) {
+                DOM.refs.stepBtn.disabled = false;
+                DOM.refs.autoBtn.disabled = false;
+            }
+            DOM.refs.pauseBtn.disabled = true;
+        },
+
+        resetAll() {
+            this.pauseAutoRun();
+            State.currentArray = State.originalArray.slice();
+            State.currentStep = 0;
+            State.startTime = 0;
+            State.isStarted = false;
+            State.completedIndicesSet = new Set();
+            Viz.renderBars();
+            Viz.updateProgress();
+            DOM.refs.status.textContent = '\u5df2\u91cd\u7f6e';
+            DOM.refs.currentOp.textContent = '-';
+            DOM.refs.currentLine.textContent = '-';
+            DOM.refs.recursionDepth.textContent = '0';
+            DOM.refs.runTime.textContent = '0 ms';
+            DOM.refs.statsBody.innerHTML = '';
+            DOM.refs.summary.innerHTML = '';
+            Viz.resetCodeHighlight();
+            DOM.refs.startBtn.disabled = false;
+            DOM.refs.stepBtn.disabled = true;
+            DOM.refs.autoBtn.disabled = true;
+            DOM.refs.pauseBtn.disabled = true;
+        },
+
+        updateSpeed() {
+            DOM.refs.speedValue.textContent = DOM.refs.speedSlider.value + 'ms';
+            if (State.isAutoRunning) {
+                this.pauseAutoRun();
+                this.startAutoRun();
+            }
+        }
+    };
+
+    // ==================== Chat 模块 ====================
+    const Chat = {
+        send() {
+            var text = DOM.refs.chatInput.value.trim();
+            if (!text) return;
+
+            this.appendMsg('user', text);
+            DOM.refs.chatInput.value = '';
+            DOM.refs.chatSendBtn.disabled = true;
+
+            State.userProfile.questionsAsked++;
+
+            var typingEl = document.createElement('div');
+            typingEl.className = 'typing-indicator';
+            typingEl.textContent = 'AI\u6b63\u5728\u601d\u8003...';
+            DOM.refs.chatMessages.appendChild(typingEl);
+            DOM.refs.chatMessages.scrollTop = DOM.refs.chatMessages.scrollHeight;
+
+            var self = this;
+            this.tryBackend(text).then(function(response) {
+                typingEl.remove();
+                self.appendMsg('ai', response.answer);
+                if (response.topic) {
+                    State.userProfile.questionTopics.push(response.topic);
+                }
+                DOM.refs.chatSendBtn.disabled = false;
+                Analysis.update();
+            });
+        },
+
+        tryBackend(question) {
+            return fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ question: question, context: 'quicksort' })
+            })
+            .then(function(resp) {
+                if (resp.ok) return resp.json();
+                return Promise.reject('fail');
+            })
+            .then(function(data) {
+                if (data.success) return { answer: data.answer, topic: data.topic || '' };
+                return Promise.reject('fail');
+            })
+            .catch(function() {
+                return {
+                    answer: '\u65e0\u6cd5\u8fde\u63a5\u670d\u52a1\u5668\uff0c\u8bf7\u786e\u4fdd\u540e\u7aef\u5df2\u542f\u52a8\u3002\u4f60\u53ef\u4ee5\u5c1d\u8bd5\u8fd0\u884c cd example/server && python run.py',
+                    topic: ''
+                };
+            });
+        },
+
+        appendMsg(role, text) {
+            var msg = document.createElement('div');
+            msg.className = 'chat-msg ' + role;
+            msg.innerHTML = text.replace(/\n/g, '<br>');
+            DOM.refs.chatMessages.appendChild(msg);
+            DOM.refs.chatMessages.scrollTop = DOM.refs.chatMessages.scrollHeight;
+        }
+    };
+
+    // ==================== Analysis 模块 ====================
+    const Analysis = {
+        update() {
+            Profile.sync();
+
+            fetch('/api/analyze', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ total_animation_steps: State.animationSteps.length || 50 })
+            })
+            .then(function(resp) { return resp.ok ? resp.json() : Promise.reject('fail'); })
+            .then(function(data) {
+                if (data.success) {
+                    State.userProfile.skillScores = data.skill_scores;
+                    Analysis.renderSkillBars();
+                    Analysis.renderRecommendations(data.recommendations);
+                } else {
+                    throw new Error('fail');
+                }
+            })
+            .catch(function() {
+                // 离线降级：仅显示当前分数，不重新计算
+                Analysis.renderSkillBars();
+            });
+        },
+
+        renderSkillBars() {
+            var container = DOM.$('skill-bars');
+            if (!container) return;
+            var scores = State.userProfile.skillScores;
+            var colors = {
+                '\u5206\u6cbb\u601d\u60f3': '#34d399',
+                '\u57fa\u51c6\u9009\u62e9': '#38bdf8',
+                '\u5206\u533a\u64cd\u4f5c': '#fbbf24',
+                '\u9012\u5f52\u8c03\u7528': '#a78bfa',
+                '\u590d\u6742\u5ea6\u5206\u6790': '#f472b6'
+            };
+
+            var html = '';
+            for (var name in scores) {
+                if (!scores.hasOwnProperty(name)) continue;
+                var score = scores[name];
+                var color = colors[name] || '#999';
+                html += '<div class="skill-bar">' +
+                    '<span class="skill-name">' + name + '</span>' +
+                    '<div class="bar-track"><div class="bar-fill" style="width:' + score + '%;background:' + color + ';"></div></div>' +
+                    '<span class="skill-val">' + score + '%</span>' +
+                    '</div>';
+            }
+            container.innerHTML = html;
+        },
+
+        renderRecommendations(recommendations) {
+            var list = DOM.$('recommendation-list');
+            if (!list) return;
+            if (!recommendations || recommendations.length === 0) {
+                list.innerHTML = '<li>\u8bf7\u5148\u5f00\u59cb\u6392\u5e8f\u6f14\u793a\uff0c\u7cfb\u7edf\u5c06\u6839\u636e\u4f60\u7684\u5b66\u4e60\u884c\u4e3a\u751f\u6210\u4e2a\u6027\u5316\u5efa\u8bae\u3002</li>';
+                return;
+            }
+
+            var html = '';
+            for (var i = 0; i < recommendations.length; i++) {
+                var rec = recommendations[i];
+                html += '<li><span class="rec-tag ' + rec.tag_class + '">' + rec.tag + '</span> ' +
+                    '<b>' + rec.knowledge + '</b>(' + rec.score + '%) - ' + rec.advice;
+                if (rec.next_topic) {
+                    html += '<br><small style="color:var(--text-muted);">\ud83d\udcda \u8fdb\u9636\u63a8\u8350\uff1a' + rec.next_topic + ' - ' + rec.next_tip + '</small>';
+                }
+                html += '</li>';
+            }
+            list.innerHTML = html;
+        }
+    };
+
+    // ==================== Marking 模块 ====================
+    const Marking = {
+        init() {
+            // 事件委托：在 code-container 上监听点击
+            var container = DOM.refs.codeContainer;
+            if (!container) return;
+
+            container.addEventListener('click', function(e) {
+                var btn = e.target.closest('.mark-icon');
+                if (!btn) return;
+                e.stopPropagation();
+
+                var lineEl = btn.closest('.code-line');
+                if (!lineEl) return;
+                var lineNum = parseInt(lineEl.dataset.line);
+                var knowledge = lineEl.dataset.knowledge || '\u672a\u5206\u7c7b';
+
+                if (State.userMarks[lineNum]) {
+                    Marking.showTooltip(lineEl, lineNum, knowledge, State.userMarks[lineNum].note);
+                } else {
+                    Marking.showTooltip(lineEl, lineNum, knowledge, '');
+                }
+            });
+
+            document.addEventListener('click', function(e) {
+                if (State.activeTooltip && !State.activeTooltip.contains(e.target)) {
+                    Marking.closeTooltip();
+                }
+            });
+        },
+
+        showTooltip(lineEl, lineNum, knowledge, existingNote) {
+            this.closeTooltip();
+
+            var tooltip = document.createElement('div');
+            tooltip.className = 'mark-tooltip';
+            tooltip.innerHTML =
+                '<div style="font-weight:bold;color:var(--primary);margin-bottom:4px;">\u7b2c ' + lineNum + ' \u884c \u00b7 ' + knowledge + '</div>' +
+                '<textarea placeholder="\u63cf\u8ff0\u4f60\u7684\u7591\u95ee...">' + existingNote + '</textarea>' +
+                '<div class="tooltip-btns">' +
+                '  <button class="btn-mark-cancel">\u53d6\u6d88</button>' +
+                '  <button class="btn-mark-save">\u4fdd\u5b58\u6807\u6ce8</button>' +
+                '</div>';
+
+            tooltip.querySelector('.btn-mark-save').addEventListener('click', function() {
+                var note = tooltip.querySelector('textarea').value.trim();
+                if (!note) { Toast.warning('\u8bf7\u8f93\u5165\u7591\u95ee\u5185\u5bb9'); return; }
+
+                State.userMarks[lineNum] = {
+                    line: lineNum, knowledge: knowledge,
+                    note: note, timestamp: new Date().toLocaleString()
+                };
+
+                lineEl.classList.add('user-marked');
+
+                if (State.userProfile.markedLines.indexOf(lineNum) === -1) {
+                    State.userProfile.markedLines.push(lineNum);
+                }
+
+                DOM.refs.notesTextarea.value += '[\u7591\u95ee\u6807\u6ce8] \u7b2c' + lineNum + '\u884c(' + knowledge + '): ' + note + '\n';
+
+                fetch('/api/mark', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ line: lineNum, knowledge: knowledge, note: note })
+                }).catch(function() {});
+
+                Analysis.update();
+                Marking.closeTooltip();
+            });
+
+            tooltip.querySelector('.btn-mark-cancel').addEventListener('click', function() {
+                Marking.closeTooltip();
+            });
+
+            tooltip.addEventListener('click', function(e) { e.stopPropagation(); });
+
+            lineEl.appendChild(tooltip);
+            tooltip.style.display = 'block';
+            State.activeTooltip = tooltip;
+            tooltip.querySelector('textarea').focus();
+        },
+
+        closeTooltip() {
+            if (State.activeTooltip) {
+                State.activeTooltip.remove();
+                State.activeTooltip = null;
+            }
+        }
+    };
+
+    // ==================== Notes 模块 ====================
+    const Notes = {
+        save() {
+            var notes = DOM.refs.notesTextarea.value;
+            if (!notes) { Toast.warning('\u7b14\u8bb0\u5185\u5bb9\u4e3a\u7a7a'); return; }
+            var blob = new Blob([notes], { type: 'text/plain' });
+            var a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = '\u5feb\u901f\u6392\u5e8f\u5b66\u4e60\u7b14\u8bb0.txt';
+            a.click();
+            URL.revokeObjectURL(a.href);
+            Toast.success('\u7b14\u8bb0\u5df2\u4fdd\u5b58');
+        },
+        load() {
+            var input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'text/plain';
+            input.onchange = function(e) {
+                var file = e.target.files[0];
+                if (!file) return;
+                var reader = new FileReader();
+                reader.onload = function(ev) {
+                    DOM.refs.notesTextarea.value = ev.target.result;
+                    Toast.success('\u7b14\u8bb0\u5df2\u52a0\u8f7d');
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        },
+        clear() {
+            if (confirm('\u786e\u5b9a\u8981\u6e05\u7a7a\u7b14\u8bb0\u5417\uff1f')) {
+                DOM.refs.notesTextarea.value = '';
+                Toast.info('\u7b14\u8bb0\u5df2\u6e05\u7a7a');
+            }
+        }
+    };
+
+    // ==================== Profile 模块 ====================
+    const Profile = {
+        sync() {
+            fetch('/api/profile', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    total_steps_viewed: State.userProfile.totalStepsViewed,
+                    marked_lines: State.userProfile.markedLines,
+                    completed_runs: State.userProfile.completedRuns
+                })
+            }).catch(function() {});
+        },
+
+        load() {
+            fetch('/api/profile')
+            .then(function(resp) { return resp.ok ? resp.json() : Promise.reject('fail'); })
+            .then(function(data) {
+                if (data.success && data.profile) {
+                    var p = data.profile;
+                    State.userProfile.totalStepsViewed = p.total_steps_viewed || 0;
+                    State.userProfile.markedLines = p.marked_lines || [];
+                    State.userProfile.questionsAsked = p.questions_asked || 0;
+                    State.userProfile.questionTopics = p.question_topics || [];
+                    State.userProfile.completedRuns = p.completed_runs || 0;
+
+                    if (p.skill_scores && Object.keys(p.skill_scores).length > 0) {
+                        State.userProfile.skillScores = p.skill_scores;
+                    }
+
+                    // 恢复已标注代码行的样式
+                    State.userProfile.markedLines.forEach(function(lineNum) {
+                        var lineEl = document.querySelector('.code-line[data-line="' + lineNum + '"]');
+                        if (lineEl) lineEl.classList.add('user-marked');
+                    });
+
+                    Analysis.renderSkillBars();
+                    // 触发后端分析获取推荐
+                    Analysis.update();
+                }
+            })
+            .catch(function() {
+                console.log('\u540e\u7aef\u4e0d\u53ef\u7528\uff0c\u4f7f\u7528\u672c\u5730\u9ed8\u8ba4\u753b\u50cf');
+            });
+        }
+    };
+
+    // ==================== Keyboard 模块 ====================
+    const Keyboard = {
+        init() {
+            document.addEventListener('keydown', function(e) {
+                // 忽略在输入框中的按键
+                var tag = e.target.tagName;
+                if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
+                switch (e.key) {
+                    case ' ':  // Space = 单步
+                        e.preventDefault();
+                        Controls.stepForward();
+                        break;
+                    case 'ArrowRight':  // → = 下一步
+                        e.preventDefault();
+                        Controls.stepForward();
+                        break;
+                    case 'p':
+                    case 'P':  // P = 暂停/继续
+                        e.preventDefault();
+                        if (State.isAutoRunning) {
+                            Controls.pauseAutoRun();
+                        } else if (State.isStarted) {
+                            Controls.startAutoRun();
+                        }
+                        break;
+                    case 'r':
+                    case 'R':  // R = 重置
+                        e.preventDefault();
+                        Controls.resetAll();
+                        break;
+                    case 'ArrowUp':  // ↑ = 加速（减少间隔）
+                        e.preventDefault();
+                        Keyboard.adjustSpeed(-100);
+                        break;
+                    case 'ArrowDown':  // ↓ = 减速（增加间隔）
+                        e.preventDefault();
+                        Keyboard.adjustSpeed(100);
+                        break;
+                }
+            });
+        },
+
+        adjustSpeed(delta) {
+            var slider = DOM.refs.speedSlider;
+            if (!slider) return;
+            var val = parseInt(slider.value) + delta;
+            val = Math.max(parseInt(slider.min), Math.min(parseInt(slider.max), val));
+            slider.value = val;
+            Controls.updateSpeed();
+        }
+    };
+
+    // ==================== 初始化 ====================
+    function init() {
+        DOM.init();
+
+        // 数据输入
+        DOM.$('random-btn').addEventListener('click', function() { Controls.generateRandomData(); });
+        DOM.$('manual-btn').addEventListener('click', function() { Controls.toggleManualInput(); });
+        DOM.$('submit-btn').addEventListener('click', function() { Controls.submitManualData(); });
+
+        // 控制按钮
+        DOM.refs.startBtn.addEventListener('click', function() { Controls.startSorting(); });
+        DOM.refs.stepBtn.addEventListener('click', function() { Controls.stepForward(); });
+        DOM.refs.autoBtn.addEventListener('click', function() { Controls.startAutoRun(); });
+        DOM.refs.pauseBtn.addEventListener('click', function() { Controls.pauseAutoRun(); });
+        DOM.refs.resetBtn.addEventListener('click', function() { Controls.resetAll(); });
+        DOM.refs.speedSlider.addEventListener('input', function() { Controls.updateSpeed(); });
+
+        // 笔记
+        DOM.$('save-btn').addEventListener('click', function() { Notes.save(); });
+        DOM.$('load-btn').addEventListener('click', function() { Notes.load(); });
+        DOM.$('clear-btn').addEventListener('click', function() { Notes.clear(); });
+
+        // 代码行标注（事件委托）
+        Marking.init();
+
+        // AI对话
+        DOM.refs.chatSendBtn.addEventListener('click', function() { Chat.send(); });
+        DOM.refs.chatInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                Chat.send();
+            }
+        });
+
+        // 主题切换
+        Theme.init();
+
+        // 键盘快捷键
+        Keyboard.init();
+
+        // 初始渲染
+        Analysis.renderSkillBars();
+        Viz.renderBars();
+        Viz.updateProgress();
+        Controls.updateSpeed();
+
+        // 从后端加载用户画像
+        Profile.load();
+
+        // 页面关闭前同步数据
+        window.addEventListener('beforeunload', function() {
+            var data = JSON.stringify({
+                total_steps_viewed: State.userProfile.totalStepsViewed,
+                marked_lines: State.userProfile.markedLines,
+                completed_runs: State.userProfile.completedRuns
+            });
+            navigator.sendBeacon('/api/profile', new Blob([data], { type: 'application/json' }));
+        });
+    }
+
+    // 页面加载完成后初始化
+    init();
+
+    })();
+    </script>
+
+    <div class="toast-container" id="toast-container"></div>
+</body>
+</html>

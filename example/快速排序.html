@@ -1,0 +1,1410 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>快速排序算法 - 基于知识图谱的算法学习推荐系统</title>
+    <style>
+        /* ========== 全局基础样式 ========== */
+        :root {
+            --input-bg: #e3f2fd;
+            --visualization-bg: #f5f5f5;
+            --code-bg: #f8f9fa;
+            --control-bg: #e8f5e9;
+            --info-bg: #fff3e0;
+            --stats-bg: #fce4ec;
+            --notes-bg: #f3e5f5;
+            --chat-bg: #e8eaf6;
+            --analysis-bg: #e0f7fa;
+            --border-color: #ddd;
+            --primary: #5c6bc0;
+            --success: #4CAF50;
+            --warning: #FF9800;
+            --danger: #f44336;
+        }
+        * { box-sizing: border-box; font-family: 'Microsoft YaHei', Arial, sans-serif; margin: 0; padding: 0; }
+        body { background-color: #f9f9f9; padding: 20px; color: #333; }
+        .main-title { text-align: center; margin-bottom: 20px; color: #333; font-size: 24px; font-weight: bold; }
+        .container { max-width: 1400px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+        .row { display: flex; gap: 20px; width: 100%; }
+        .row-single { width: 100%; }
+        .col { flex: 1; border-radius: 8px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: flex; flex-direction: column; }
+        .panel-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #333; border-bottom: 2px solid rgba(0,0,0,0.1); padding-bottom: 8px; }
+
+        /* ========== 按钮通用样式 ========== */
+        .btn { padding: 8px 15px; border: none; border-radius: 4px; background-color: #4285f4; color: white; cursor: pointer; font-size: 14px; transition: all 0.3s; display: flex; align-items: center; gap: 5px; }
+        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn:disabled { background-color: #cccccc; cursor: not-allowed; transform: none; }
+        .btn-random { background-color: #34a853; }
+        .btn-manual { background-color: #ea4335; }
+        .btn-submit { background-color: #fbbc05; }
+        .btn-start { background-color: #4CAF50; }
+        .btn-step { background-color: #FF9800; }
+        .btn-auto { background-color: #9C27B0; }
+        .btn-pause { background-color: #607D8B; }
+        .btn-reset { background-color: #f44336; }
+        .btn-save { background-color: #7e57c2; }
+        .btn-load { background-color: #26a69a; }
+        .btn-clear { background-color: #ef5350; }
+
+        /* ========== 数据输入模块样式 ========== */
+        .input-panel { background-color: var(--input-bg); }
+        .input-section { display: flex; flex-direction: column; gap: 15px; }
+        .input-group { display: flex; align-items: center; gap: 10px; }
+        .input-group label { width: 100px; font-size: 14px; }
+        .input-group input { flex: 1; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 4px; font-size: 14px; }
+        .btn-group { display: flex; gap: 10px; margin-top: 10px; }
+
+        /* ========== 算法思想面板 ========== */
+        .concept-panel { background-color: #fff8e1; }
+        .concept-content { font-size: 14px; line-height: 1.8; }
+        .concept-content ol { padding-left: 20px; }
+        .concept-content li { margin-bottom: 4px; }
+
+        /* ========== 可视化模块样式 ========== */
+        .visualization-panel { background-color: var(--visualization-bg); min-height: 350px; padding: 20px; }
+        .visualization-container { height: 300px; display: flex; align-items: flex-end; justify-content: center; gap: 8px; padding: 10px; overflow-x: auto; }
+        .bar { width: 40px; min-width: 25px; background-color: #64B5F6; position: relative; transition: height 0.3s, background-color 0.3s; border-radius: 4px 4px 0 0; }
+        .bar.pivot { background-color: #E91E63; }
+        .bar.comparing { background-color: #FFA726; }
+        .bar.completed { background-color: #81C784; }
+        .bar.swapping { background-color: #FF5722; }
+        .bar-value { position: absolute; bottom: -25px; width: 100%; text-align: center; font-size: 12px; font-weight: bold; }
+        .legend { display: flex; justify-content: center; gap: 20px; margin-top: 20px; font-size: 14px; }
+        .legend-item { display: flex; align-items: center; gap: 5px; }
+        .legend-color { width: 20px; height: 20px; border-radius: 4px; }
+
+        /* ========== 代码展示模块样式 ========== */
+        .code-panel { background-color: var(--code-bg); }
+        .code-container { flex: 1; background-color: #263238; border-radius: 4px; padding: 15px; font-family: 'Courier New', Courier, monospace; font-size: 13px; line-height: 1.6; color: #e0e0e0; overflow-y: auto; max-height: 400px; }
+        .code-line { display: flex; margin-bottom: 2px; padding: 2px 4px; border-radius: 3px; cursor: pointer; position: relative; }
+        .code-line:hover { background-color: rgba(255,255,255,0.05); }
+        .line-number { width: 30px; color: #78909c; text-align: right; padding-right: 15px; user-select: none; }
+        .line-code { flex: 1; white-space: pre; }
+        .keyword { color: #ff5370; }
+        .function { color: #82aaff; }
+        .comment { color: #546e7a; font-style: italic; }
+        .highlight { background-color: #2c3b41; box-shadow: 0 0 0 2px #ffcb6b; }
+
+        /* ========== 功能1: 代码行标注样式 ========== */
+        .code-line .mark-icon { display: none; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: #E91E63; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer; align-items: center; justify-content: center; line-height: 20px; text-align: center; }
+        .code-line:hover .mark-icon { display: flex; }
+        .code-line.user-marked { background-color: rgba(233, 30, 99, 0.15); border-left: 3px solid #E91E63; }
+        .code-line.user-marked .mark-icon { display: flex; background: #4CAF50; }
+        .mark-tooltip { position: absolute; left: 100%; top: 0; background: white; color: #333; padding: 10px; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); width: 280px; z-index: 100; font-family: 'Microsoft YaHei', sans-serif; font-size: 13px; display: none; }
+        .mark-tooltip textarea { width: 100%; height: 60px; border: 1px solid #ddd; border-radius: 4px; padding: 6px; font-size: 12px; resize: none; margin: 6px 0; }
+        .mark-tooltip .tooltip-btns { display: flex; gap: 6px; justify-content: flex-end; }
+        .mark-tooltip .tooltip-btns button { padding: 4px 10px; border: none; border-radius: 3px; cursor: pointer; font-size: 12px; }
+        .mark-tooltip .btn-mark-save { background: var(--primary); color: white; }
+        .mark-tooltip .btn-mark-cancel { background: #eee; color: #333; }
+
+        /* ========== 执行信息面板 ========== */
+        .info-panel { background-color: var(--info-bg); padding: 15px; border-radius: 8px; }
+        .info-container { display: flex; flex-direction: column; gap: 10px; }
+        .info-item { display: flex; }
+        .info-label { width: 100px; font-size: 14px; color: #5d4037; }
+        .info-value { flex: 1; font-size: 14px; font-weight: bold; color: #3e2723; }
+
+        /* ========== 控制面板 ========== */
+        .control-panel { background-color: var(--control-bg); padding: 15px; border-radius: 8px; }
+        .control-container { display: flex; flex-direction: column; gap: 15px; }
+        .control-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
+        .speed-control { display: flex; align-items: center; gap: 10px; }
+        .speed-control label { font-size: 14px; color: #2e7d32; }
+        .speed-slider { flex: 1; }
+        .speed-value { width: 60px; text-align: center; font-size: 14px; font-weight: bold; color: #1b5e20; }
+
+        /* ========== 功能2: AI对话框样式 ========== */
+        .chat-panel { background-color: var(--chat-bg); }
+        .chat-messages { flex: 1; min-height: 200px; max-height: 300px; overflow-y: auto; background: white; border-radius: 6px; padding: 12px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px; }
+        .chat-msg { padding: 8px 12px; border-radius: 12px; max-width: 85%; font-size: 13px; line-height: 1.5; word-wrap: break-word; }
+        .chat-msg.user { background-color: #5c6bc0; color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+        .chat-msg.ai { background-color: #f0f0f0; color: #333; align-self: flex-start; border-bottom-left-radius: 4px; }
+        .chat-msg.system { background-color: #fff3e0; color: #e65100; align-self: center; font-size: 12px; text-align: center; }
+        .chat-input-row { display: flex; gap: 8px; }
+        .chat-input { flex: 1; padding: 8px 12px; border: 1px solid #c5cae9; border-radius: 20px; font-size: 14px; outline: none; }
+        .chat-input:focus { border-color: var(--primary); }
+        .chat-send-btn { background: var(--primary); color: white; border: none; border-radius: 20px; padding: 8px 20px; cursor: pointer; font-size: 14px; }
+        .chat-send-btn:hover { background: #3f51b5; }
+        .chat-send-btn:disabled { background: #ccc; cursor: not-allowed; }
+        .typing-indicator { font-size: 12px; color: #999; font-style: italic; padding: 4px 0; }
+
+        /* ========== 功能3: 个性化分析面板样式 ========== */
+        .analysis-panel { background-color: var(--analysis-bg); }
+        .analysis-content { display: flex; flex-direction: column; gap: 12px; }
+        .analysis-section { background: white; border-radius: 6px; padding: 12px; }
+        .analysis-section h4 { font-size: 14px; color: var(--primary); margin-bottom: 8px; }
+        .skill-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+        .skill-bar .skill-name { width: 100px; font-size: 12px; color: #555; }
+        .skill-bar .bar-track { flex: 1; height: 16px; background: #e0e0e0; border-radius: 8px; overflow: hidden; }
+        .skill-bar .bar-fill { height: 100%; border-radius: 8px; transition: width 0.5s; }
+        .skill-bar .skill-val { width: 40px; font-size: 12px; text-align: right; font-weight: bold; }
+        .recommendation-list { list-style: none; padding: 0; }
+        .recommendation-list li { padding: 8px; border-bottom: 1px solid #eee; font-size: 13px; display: flex; align-items: center; gap: 8px; }
+        .recommendation-list li:last-child { border-bottom: none; }
+        .rec-tag { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; color: white; }
+        .rec-tag.easy { background: #4CAF50; }
+        .rec-tag.medium { background: #FF9800; }
+        .rec-tag.hard { background: #f44336; }
+
+        /* ========== 性能统计模块 ========== */
+        .stats-panel { background-color: var(--stats-bg); }
+        .stats-container { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th, td { border: 1px solid #f48fb1; padding: 8px 12px; text-align: center; }
+        th { background-color: #f8bbd0; color: #880e4f; }
+        tr:nth-child(even) { background-color: #fce4ec; }
+        .summary { margin-top: 15px; font-size: 14px; padding: 10px; background-color: #f8bbd0; border-radius: 4px; }
+        .summary-item { display: flex; margin-bottom: 5px; }
+        .summary-label { width: 120px; font-weight: bold; color: #880e4f; }
+        .summary-value { flex: 1; font-weight: bold; color: #4a148c; }
+
+        /* ========== 记事本模块 ========== */
+        .notes-panel { background-color: var(--notes-bg); }
+        .notes-textarea { height: 120px; width: 100%; padding: 12px; border: 1px solid #ce93d8; border-radius: 4px; resize: vertical; font-size: 14px; background-color: white; }
+        .notes-buttons { display: flex; gap: 10px; margin-top: 10px; }
+
+        /* ========== 完成提示 ========== */
+        .completion-message { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: #4caf50; color: white; padding: 20px 40px; border-radius: 8px; font-size: 18px; font-weight: bold; box-shadow: 0 4px 20px rgba(0,0,0,0.2); z-index: 1000; display: none; animation: fadeInOut 3s ease-in-out; }
+        @keyframes fadeInOut { 0% { opacity: 0; } 20% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
+
+        /* ========== 响应式 ========== */
+        @media (max-width: 768px) {
+            .row { flex-direction: column; }
+            .visualization-container { height: 200px; }
+            .btn-group, .control-buttons, .notes-buttons { flex-wrap: wrap; }
+            .btn { flex: 1; min-width: 100px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="main-title">快速排序算法 - 基于知识图谱的算法学习推荐系统</h1>
+        <!-- ====== 第一层：数据输入 + 快速排序思想 ====== -->
+        <div class="row">
+            <div class="col input-panel">
+                <div class="panel-title">数据输入模块</div>
+                <div class="input-section">
+                    <div class="input-group">
+                        <label for="element-count">元素个数:</label>
+                        <input type="number" id="element-count" min="3" max="20" value="8">
+                    </div>
+                    <div class="btn-group">
+                        <button id="random-btn" class="btn btn-random">随机生成数据</button>
+                        <button id="manual-btn" class="btn btn-manual">手动输入数据</button>
+                    </div>
+                    <div id="manual-input-container" style="display: none;">
+                        <div class="input-group">
+                            <label for="manual-input">输入数据:</label>
+                            <input type="text" id="manual-input" placeholder="例如: 5,3,8,1,2">
+                        </div>
+                        <button id="submit-btn" class="btn btn-submit" style="margin-top:8px;">提交数据</button>
+                    </div>
+                </div>
+            </div>
+            <div class="col concept-panel">
+                <div class="panel-title">快速排序算法思想</div>
+                <div class="concept-content">
+                    <p>快速排序是一种高效的分治排序算法，由Tony Hoare于1960年提出。其核心思想是：</p>
+                    <ol>
+                        <li><b>选择基准(Pivot)：</b>从数组中选取一个元素作为基准值。</li>
+                        <li><b>分区(Partition)：</b>将数组分为两部分，左边的元素都小于基准，右边的元素都大于基准。</li>
+                        <li><b>递归排序：</b>对左右两个子数组分别递归执行快速排序。</li>
+                        <li><b>合并：</b>由于是原地排序，分区完成后数组自然有序。</li>
+                    </ol>
+                    <p style="margin-top:8px;">平均时间复杂度: <b>O(n log n)</b>，最坏: <b>O(n²)</b>，空间复杂度: <b>O(log n)</b></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ====== 第二层：算法可视化 ====== -->
+        <div class="row-single">
+            <div class="col visualization-panel">
+                <div class="panel-title">算法可视化模块</div>
+                <div id="visualization" class="visualization-container"></div>
+                <div class="legend">
+                    <div class="legend-item"><div class="legend-color" style="background:#64B5F6;"></div><span>未处理</span></div>
+                    <div class="legend-item"><div class="legend-color" style="background:#E91E63;"></div><span>基准(Pivot)</span></div>
+                    <div class="legend-item"><div class="legend-color" style="background:#FFA726;"></div><span>正在比较</span></div>
+                    <div class="legend-item"><div class="legend-color" style="background:#FF5722;"></div><span>交换</span></div>
+                    <div class="legend-item"><div class="legend-color" style="background:#81C784;"></div><span>已就位</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ====== 第三层：代码展示(含标注功能) + 控制面板 ====== -->
+        <div class="row">
+            <div class="col code-panel">
+                <div class="panel-title">算法代码模块 <span style="font-size:12px;color:#E91E63;font-weight:normal;">（点击行末 ? 标记疑问）</span></div>
+                <div class="code-container" id="code-container">
+                    <div class="code-line" data-line="1" data-knowledge="分治思想"><div class="line-number">1</div><div class="line-code"><span class="comment">// 快速排序主函数：采用分治策略，递归地将数组排序</span></div><button class="mark-icon" title="标记疑问">?</button></div>
+                    <div class="code-line" data-line="2" data-knowledge="分治思想"><div class="line-number">2</div><div class="line-code"><span class="keyword">function</span> <span class="function">quickSort</span>(arr, low, high) {</div><button class="mark-icon" title="标记疑问">?</button></div>
+                    <div class="code-line" data-line="3" data-knowledge="递归调用"><div class="line-number">3</div><div class="line-code">  <span class="keyword">if</span> (low &lt; high) { <span class="comment">// 递归终止条件：子数组长度大于1</span></div><button class="mark-icon" title="标记疑问">?</button></div>
+                    <div class="code-line" data-line="4" data-knowledge="分区操作"><div class="line-number">4</div><div class="line-code">    <span class="keyword">let</span> pi = <span class="function">partition</span>(arr, low, high); <span class="comment">// 分区，返回基准的最终位置</span></div><button class="mark-icon" title="标记疑问">?</button></div>
+                    <div class="code-line" data-line="5" data-knowledge="递归调用"><div class="line-number">5</div><div class="line-code">    <span class="function">quickSort</span>(arr, low, pi - 1);  <span class="comment">// 递归排序基准左边的子数组</span></div><button class="mark-icon" title="标记疑问">?</button></div>
+                    <div class="code-line" data-line="6" data-knowledge="递归调用"><div class="line-number">6</div><div class="line-code">    <span class="function">quickSort</span>(arr, pi + 1, high); <span class="comment">// 递归排序基准右边的子数组</span></div><button class="mark-icon" title="标记疑问">?</button></div>
+                    <div class="code-line" data-line="7" data-knowledge="分治思想"><div class="line-number">7</div><div class="line-code">  }</div><button class="mark-icon" title="标记疑问">?</button></div>
+                    <div class="code-line" data-line="8" data-knowledge="分治思想"><div class="line-number">8</div><div class="line-code">}</div><button class="mark-icon" title="标记疑问">?</button></div>
+                    <div class="code-line" data-line="9" data-knowledge="分区操作"><div class="line-number">9</div><div class="line-code"></div><button class="mark-icon" title="标记疑问">?</button></div>
+                    <div class="code-line" data-line="10" data-knowledge="分区操作"><div class="line-number">10</div><div class="line-code"><span class="comment">// 分区函数：选最后一个元素为基准，将小于基准的放左边，大于的放右边</span></div><button class="mark-icon" title="标记疑问">?</button></div>
+                    <div class="code-line" data-line="11" data-knowledge="基准选择"><div class="line-number">11</div><div class="line-code"><span class="keyword">function</span> <span class="function">partition</span>(arr, low, high) {</div><button class="mark-icon" title="标记疑问">?</button></div>
+                    <div class="code-line" data-line="12" data-knowledge="基准选择"><div class="line-number">12</div><div class="line-code">  <span class="keyword">let</span> pivot = arr[high]; <span class="comment">// 选择最后一个元素作为基准值</span></div><button class="mark-icon" title="标记疑问">?</button></div>
+                    <div class="code-line" data-line="13" data-knowledge="分区操作"><div class="line-number">13</div><div class="line-code">  <span class="keyword">let</span> i = low - 1; <span class="comment">// i 指向小于基准区域的末尾</span></div><button class="mark-icon" title="标记疑问">?</button></div>
+                    <div class="code-line" data-line="14" data-knowledge="分区操作"><div class="line-number">14</div><div class="line-code">  <span class="keyword">for</span> (<span class="keyword">let</span> j = low; j &lt; high; j++) { <span class="comment">// 遍历 low 到 high-1</span></div><button class="mark-icon" title="标记疑问">?</button></div>
+                    <div class="code-line" data-line="15" data-knowledge="分区操作"><div class="line-number">15</div><div class="line-code">    <span class="keyword">if</span> (arr[j] &lt;= pivot) { <span class="comment">// 当前元素小于等于基准</span></div><button class="mark-icon" title="标记疑问">?</button></div>
+                    <div class="code-line" data-line="16" data-knowledge="分区操作"><div class="line-number">16</div><div class="line-code">      i++; <span class="comment">// 扩大小于基准的区域</span></div><button class="mark-icon" title="标记疑问">?</button></div>
+                    <div class="code-line" data-line="17" data-knowledge="分区操作"><div class="line-number">17</div><div class="line-code">      [arr[i], arr[j]] = [arr[j], arr[i]]; <span class="comment">// 交换到左边区域</span></div><button class="mark-icon" title="标记疑问">?</button></div>
+                    <div class="code-line" data-line="18" data-knowledge="分区操作"><div class="line-number">18</div><div class="line-code">    }</div><button class="mark-icon" title="标记疑问">?</button></div>
+                    <div class="code-line" data-line="19" data-knowledge="分区操作"><div class="line-number">19</div><div class="line-code">  }</div><button class="mark-icon" title="标记疑问">?</button></div>
+                    <div class="code-line" data-line="20" data-knowledge="基准选择"><div class="line-number">20</div><div class="line-code">  [arr[i+1], arr[high]] = [arr[high], arr[i+1]]; <span class="comment">// 将基准放到正确位置</span></div><button class="mark-icon" title="标记疑问">?</button></div>
+                    <div class="code-line" data-line="21" data-knowledge="基准选择"><div class="line-number">21</div><div class="line-code">  <span class="keyword">return</span> i + 1; <span class="comment">// 返回基准的最终索引</span></div><button class="mark-icon" title="标记疑问">?</button></div>
+                    <div class="code-line" data-line="22" data-knowledge="分区操作"><div class="line-number">22</div><div class="line-code">}</div><button class="mark-icon" title="标记疑问">?</button></div>
+                </div>
+            </div>
+            <div class="col" style="display:flex;flex-direction:column;gap:15px;">
+                <div class="info-panel">
+                    <div class="panel-title">当前执行信息</div>
+                    <div class="info-container">
+                        <div class="info-item"><div class="info-label">状态:</div><div class="info-value" id="status">未开始</div></div>
+                        <div class="info-item"><div class="info-label">当前操作:</div><div class="info-value" id="current-op">-</div></div>
+                        <div class="info-item"><div class="info-label">执行行号:</div><div class="info-value" id="current-line">-</div></div>
+                        <div class="info-item"><div class="info-label">递归深度:</div><div class="info-value" id="recursion-depth">0</div></div>
+                        <div class="info-item"><div class="info-label">运行时间:</div><div class="info-value" id="run-time">0 ms</div></div>
+                    </div>
+                </div>
+                <div class="control-panel">
+                    <div class="panel-title">算法控制模块</div>
+                    <div class="control-container">
+                        <div class="control-buttons">
+                            <button id="start-btn" class="btn btn-start">开始</button>
+                            <button id="step-btn" class="btn btn-step" disabled>单步运行</button>
+                            <button id="auto-btn" class="btn btn-auto" disabled>自动运行</button>
+                            <button id="pause-btn" class="btn btn-pause" disabled>暂停</button>
+                            <button id="reset-btn" class="btn btn-reset">重置</button>
+                        </div>
+                        <div class="speed-control">
+                            <label for="speed-slider">执行速度:</label>
+                            <input type="range" id="speed-slider" min="100" max="2000" step="100" value="500" class="speed-slider">
+                            <span id="speed-value" class="speed-value">500ms</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ====== 第四层：AI对话 + 个性化分析 ====== -->
+        <div class="row">
+            <div class="col chat-panel">
+                <div class="panel-title">AI 智能助手</div>
+                <div class="chat-messages" id="chat-messages">
+                    <div class="chat-msg system">你好！我是算法学习助手，可以回答你关于快速排序的任何问题。</div>
+                </div>
+                <div class="chat-input-row">
+                    <input type="text" class="chat-input" id="chat-input" placeholder="输入你的问题..." />
+                    <button class="chat-send-btn" id="chat-send-btn">发送</button>
+                </div>
+            </div>
+            <div class="col analysis-panel">
+                <div class="panel-title">个性化学习分析</div>
+                <div class="analysis-content" id="analysis-content">
+                    <div class="analysis-section">
+                        <h4>知识掌握度</h4>
+                        <div id="skill-bars">
+                            <div class="skill-bar"><span class="skill-name">分治思想</span><div class="bar-track"><div class="bar-fill" style="width:0%;background:#4CAF50;"></div></div><span class="skill-val">0%</span></div>
+                            <div class="skill-bar"><span class="skill-name">基准选择</span><div class="bar-track"><div class="bar-fill" style="width:0%;background:#2196F3;"></div></div><span class="skill-val">0%</span></div>
+                            <div class="skill-bar"><span class="skill-name">分区操作</span><div class="bar-track"><div class="bar-fill" style="width:0%;background:#FF9800;"></div></div><span class="skill-val">0%</span></div>
+                            <div class="skill-bar"><span class="skill-name">递归调用</span><div class="bar-track"><div class="bar-fill" style="width:0%;background:#9C27B0;"></div></div><span class="skill-val">0%</span></div>
+                            <div class="skill-bar"><span class="skill-name">复杂度分析</span><div class="bar-track"><div class="bar-fill" style="width:0%;background:#E91E63;"></div></div><span class="skill-val">0%</span></div>
+                        </div>
+                    </div>
+                    <div class="analysis-section">
+                        <h4>学习建议</h4>
+                        <ul class="recommendation-list" id="recommendation-list">
+                            <li>请先开始排序演示，系统将根据你的学习行为生成个性化建议。</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ====== 第五层：性能统计 ====== -->
+        <div class="row-single">
+            <div class="col stats-panel">
+                <div class="panel-title">算法性能统计</div>
+                <div class="stats-container">
+                    <table id="stats-table">
+                        <thead><tr><th>序号</th><th>分区范围</th><th>基准值</th><th>比较次数</th><th>交换次数</th><th>递归深度</th></tr></thead>
+                        <tbody id="stats-body"></tbody>
+                    </table>
+                    <div class="summary" id="summary"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ====== 第六层：记事本 ====== -->
+        <div class="row-single">
+            <div class="col notes-panel">
+                <div class="panel-title">学习笔记</div>
+                <textarea id="notes-textarea" class="notes-textarea" placeholder="在这里记录你的学习笔记..."></textarea>
+                <div class="notes-buttons">
+                    <button id="save-btn" class="btn btn-save">保存笔记</button>
+                    <button id="load-btn" class="btn btn-load">加载笔记</button>
+                    <button id="clear-btn" class="btn btn-clear">清空笔记</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="completion-message" class="completion-message">排序已完成！</div>
+    <script>
+    /*
+    ============================================================
+    第一部分：全局变量与DOM引用
+    ------------------------------------------------------------
+    思路说明：
+    将所有需要在多个函数间共享的状态集中声明为全局变量，
+    DOM元素引用在页面加载时一次性获取，避免重复查询DOM。
+    ============================================================
+    */
+
+    // --- 排序相关状态 ---
+    let originalArray = [];      // 用户输入/生成的原始数组
+    let currentArray = [];       // 当前显示的数组（随排序步骤变化）
+    let animationSteps = [];     // 预先生成的所有动画步骤
+    let currentStep = 0;         // 当前执行到第几步
+    let isAutoRunning = false;   // 是否正在自动运行
+    let animationInterval = null;// 自动运行的定时器ID
+    let startTime = 0;           // 排序开始时间戳
+    let isStarted = false;       // 是否已点击"开始"
+    let completedIndicesSet = new Set(); // 已经就位的元素索引集合
+
+    // --- 功能1：用户建模相关 ---
+    // userMarks 存储用户对代码行的标注，key为行号，value为标注信息
+    let userMarks = {};
+    // 知识点与代码行的映射关系，用于分析用户对各知识点的掌握情况
+    const knowledgeMap = {
+        '分治思想': [1, 2, 7, 8],
+        '基准选择': [11, 12, 20, 21],
+        '分区操作': [4, 10, 13, 14, 15, 16, 17, 18, 19, 22],
+        '递归调用': [3, 5, 6],
+        '复杂度分析': []  // 通过AI对话和学习行为推断
+    };
+
+    // --- 功能2：AI对话相关 ---
+    let chatHistory = []; // 对话历史记录
+
+    // --- 功能3：用户学习行为数据 ---
+    let userProfile = {
+        totalStepsViewed: 0,       // 查看的总步骤数
+        markedLines: [],           // 标记过疑问的行号
+        questionsAsked: 0,         // 向AI提问的次数
+        questionTopics: [],        // 提问涉及的主题
+        completedRuns: 0,          // 完成排序的次数
+        skillScores: {             // 各知识点掌握度 (0-100)
+            '分治思想': 0,
+            '基准选择': 0,
+            '分区操作': 0,
+            '递归调用': 0,
+            '复杂度分析': 0
+        }
+    };
+
+    // --- DOM元素引用 ---
+    const $ = id => document.getElementById(id);
+    const visualization = $('visualization');
+    const startBtn = $('start-btn');
+    const stepBtn = $('step-btn');
+    const autoBtn = $('auto-btn');
+    const pauseBtn = $('pause-btn');
+    const resetBtn = $('reset-btn');
+    const speedSlider = $('speed-slider');
+    const speedValue = $('speed-value');
+    const statusDisplay = $('status');
+    const currentOpDisplay = $('current-op');
+    const currentLineDisplay = $('current-line');
+    const recursionDepthDisplay = $('recursion-depth');
+    const runTimeDisplay = $('run-time');
+    const statsBody = $('stats-body');
+    const summaryDisplay = $('summary');
+    const notesTextarea = $('notes-textarea');
+    const chatMessages = $('chat-messages');
+    const chatInput = $('chat-input');
+    const chatSendBtn = $('chat-send-btn');
+    const completionMessage = $('completion-message');
+    const codeContainer = $('code-container');
+    const codeLines = document.querySelectorAll('.code-line');
+
+    /*
+    ============================================================
+    第二部分：数据输入与可视化渲染
+    ------------------------------------------------------------
+    思路说明：
+    1. generateRandomData / submitManualData 负责获取用户数据
+    2. renderBars 根据当前数组状态渲染柱状图，通过参数控制
+       哪些柱子高亮（pivot/comparing/swapping/completed）
+    3. setupVisualization 在数据就绪后初始化整个排序流程
+    ============================================================
+    */
+
+    // 生成随机数据
+    function generateRandomData() {
+        const count = parseInt($('element-count').value);
+        if (isNaN(count) || count < 3 || count > 20) {
+            alert('请输入3到20之间的数字'); return;
+        }
+        originalArray = [];
+        for (let i = 0; i < count; i++) {
+            originalArray.push(Math.floor(Math.random() * 90) + 10);
+        }
+        setupVisualization();
+    }
+
+    // 切换手动输入区域显示/隐藏
+    function toggleManualInput() {
+        const c = $('manual-input-container');
+        c.style.display = c.style.display === 'none' ? 'block' : 'none';
+    }
+
+    // 提交手动输入的数据
+    function submitManualData() {
+        const text = $('manual-input').value.trim();
+        if (!text) { alert('请输入数据'); return; }
+        const arr = text.split(',').map(s => parseInt(s.trim()));
+        if (arr.some(isNaN) || arr.length < 3 || arr.length > 20) {
+            alert('请输入3到20个有效数字，用逗号分隔'); return;
+        }
+        originalArray = arr;
+        $('element-count').value = arr.length;
+        $('manual-input-container').style.display = 'none';
+        setupVisualization();
+    }
+
+    // 渲染柱状图
+    // states 对象: { pivot: [索引], comparing: [索引], swapping: [索引], completed: [索引] }
+    function renderBars(states = {}) {
+        visualization.innerHTML = '';
+        if (currentArray.length === 0) return;
+        const maxVal = Math.max(...currentArray, 10);
+        const containerH = visualization.clientHeight || 280;
+
+        currentArray.forEach((val, idx) => {
+            const barH = (val / maxVal) * (containerH - 40);
+            const bar = document.createElement('div');
+            bar.className = 'bar';
+            bar.style.height = barH + 'px';
+
+            // 根据状态添加不同的CSS类来着色
+            if (states.completed && states.completed.includes(idx)) {
+                bar.classList.add('completed');
+            }
+            if (states.pivot && states.pivot.includes(idx)) {
+                bar.classList.add('pivot');
+            }
+            if (states.comparing && states.comparing.includes(idx)) {
+                bar.classList.add('comparing');
+            }
+            if (states.swapping && states.swapping.includes(idx)) {
+                bar.classList.add('swapping');
+            }
+
+            const label = document.createElement('div');
+            label.className = 'bar-value';
+            label.textContent = val;
+            bar.appendChild(label);
+            visualization.appendChild(bar);
+        });
+    }
+
+    // 初始化/重置可视化状态
+    function setupVisualization() {
+        if (originalArray.length === 0) return;
+        currentArray = [...originalArray];
+        animationSteps = [];
+        currentStep = 0;
+        isStarted = false;
+        completedIndicesSet = new Set();
+
+        // 预先生成快速排序的所有动画步骤
+        generateQuickSortSteps([...originalArray]);
+
+        renderBars();
+        resetCodeHighlight();
+        updateStatus('准备就绪');
+        updateCurrentOp('-');
+        updateCurrentLine('-');
+        recursionDepthDisplay.textContent = '0';
+        updateRunTime(0);
+        statsBody.innerHTML = '';
+        summaryDisplay.innerHTML = '';
+
+        startBtn.disabled = false;
+        stepBtn.disabled = true;
+        autoBtn.disabled = true;
+        pauseBtn.disabled = true;
+    }
+
+    /*
+    ============================================================
+    第三部分：快速排序动画步骤生成
+    ------------------------------------------------------------
+    思路说明：
+    这是整个可视化的核心。我们不是实时排序，而是先用一个
+    模拟的快速排序把每一步操作（选基准、比较、交换、分区完成、
+    递归进入/返回）都记录到 animationSteps 数组中。
+    之后用户点"单步"或"自动"时，只需按顺序回放这些步骤。
+
+    每个步骤对象包含：
+    - array: 当前数组快照
+    - type: 步骤类型 (pivot/compare/swap/partition-done/recurse/complete)
+    - line: 对应代码行号
+    - op: 操作描述文字
+    - indices: 涉及的数组索引
+    - depth: 递归深度
+    - pivotIdx: 基准索引
+    - range: [low, high] 当前处理范围
+    - stats: 统计信息
+    ============================================================
+    */
+
+    function generateQuickSortSteps(arr) {
+        let totalComparisons = 0;
+        let totalSwaps = 0;
+        let partitionCount = 0;
+        const steps = [];
+        const completed = new Set(); // 已就位的索引
+
+        // 添加初始步骤
+        steps.push({
+            array: [...arr], type: 'init', line: 1, depth: 0,
+            op: '初始化：准备对数组进行快速排序',
+            states: {}, range: [0, arr.length - 1]
+        });
+
+        // 递归快速排序的模拟函数
+        function qsort(low, high, depth) {
+            // 记录进入递归
+            steps.push({
+                array: [...arr], type: 'recurse', line: 2, depth: depth,
+                op: `进入 quickSort(arr, ${low}, ${high})，递归深度=${depth}`,
+                states: { completed: [...completed] }, range: [low, high]
+            });
+
+            if (low < high) {
+                // 记录条件判断
+                steps.push({
+                    array: [...arr], type: 'check', line: 3, depth: depth,
+                    op: `判断 low(${low}) < high(${high})，条件成立，开始分区`,
+                    states: { completed: [...completed] }, range: [low, high]
+                });
+
+                // --- partition 过程 ---
+                const pivot = arr[high];
+                partitionCount++;
+                const partId = partitionCount;
+                let partComparisons = 0;
+                let partSwaps = 0;
+
+                // 选择基准
+                steps.push({
+                    array: [...arr], type: 'pivot', line: 12, depth: depth,
+                    op: `选择基准 pivot = arr[${high}] = ${pivot}`,
+                    states: { pivot: [high], completed: [...completed] },
+                    range: [low, high]
+                });
+
+                let i = low - 1;
+                steps.push({
+                    array: [...arr], type: 'init-i', line: 13, depth: depth,
+                    op: `初始化 i = ${low} - 1 = ${i}`,
+                    states: { pivot: [high], completed: [...completed] },
+                    range: [low, high]
+                });
+
+                for (let j = low; j < high; j++) {
+                    partComparisons++;
+                    totalComparisons++;
+
+                    // 比较步骤
+                    steps.push({
+                        array: [...arr], type: 'compare', line: 15, depth: depth,
+                        op: `比较 arr[${j}]=${arr[j]} <= pivot(${pivot}) ? ${arr[j] <= pivot ? '是' : '否'}`,
+                        states: { pivot: [high], comparing: [j], completed: [...completed] },
+                        range: [low, high]
+                    });
+
+                    if (arr[j] <= pivot) {
+                        i++;
+                        if (i !== j) {
+                            // 交换步骤
+                            steps.push({
+                                array: [...arr], type: 'swap', line: 17, depth: depth,
+                                op: `交换 arr[${i}]=${arr[i]} 和 arr[${j}]=${arr[j]}`,
+                                states: { pivot: [high], swapping: [i, j], completed: [...completed] },
+                                range: [low, high]
+                            });
+                            [arr[i], arr[j]] = [arr[j], arr[i]];
+                            partSwaps++;
+                            totalSwaps++;
+                            // 交换后的状态
+                            steps.push({
+                                array: [...arr], type: 'after-swap', line: 17, depth: depth,
+                                op: `交换完成，现在 arr[${i}]=${arr[i]}, arr[${j}]=${arr[j]}`,
+                                states: { pivot: [high], completed: [...completed] },
+                                range: [low, high]
+                            });
+                        }
+                    }
+                }
+
+                // 将基准放到正确位置
+                const pivotFinalPos = i + 1;
+                if (pivotFinalPos !== high) {
+                    steps.push({
+                        array: [...arr], type: 'swap', line: 20, depth: depth,
+                        op: `将基准放到正确位置：交换 arr[${pivotFinalPos}]=${arr[pivotFinalPos]} 和 arr[${high}]=${arr[high]}`,
+                        states: { swapping: [pivotFinalPos, high], completed: [...completed] },
+                        range: [low, high]
+                    });
+                    [arr[pivotFinalPos], arr[high]] = [arr[high], arr[pivotFinalPos]];
+                    totalSwaps++;
+                    partSwaps++;
+                }
+
+                // 基准已就位
+                completed.add(pivotFinalPos);
+                steps.push({
+                    array: [...arr], type: 'partition-done', line: 21, depth: depth,
+                    op: `分区完成！基准 ${pivot} 就位于索引 ${pivotFinalPos}`,
+                    states: { pivot: [pivotFinalPos], completed: [...completed] },
+                    range: [low, high],
+                    stats: { id: partId, range: `[${low}, ${high}]`, pivot: pivot,
+                             comparisons: partComparisons, swaps: partSwaps, depth: depth }
+                });
+
+                // 递归左半部分
+                qsort(low, pivotFinalPos - 1, depth + 1);
+                // 递归右半部分
+                qsort(pivotFinalPos + 1, high, depth + 1);
+
+            } else if (low === high) {
+                // 单个元素，直接就位
+                completed.add(low);
+                steps.push({
+                    array: [...arr], type: 'single', line: 3, depth: depth,
+                    op: `子数组只有一个元素 arr[${low}]=${arr[low]}，已就位`,
+                    states: { completed: [...completed] }, range: [low, high]
+                });
+            } else {
+                // 空子数组
+                steps.push({
+                    array: [...arr], type: 'empty', line: 3, depth: depth,
+                    op: `low(${low}) >= high(${high})，空子数组，返回`,
+                    states: { completed: [...completed] }, range: [low, high]
+                });
+            }
+        }
+
+        // 开始递归
+        qsort(0, arr.length - 1, 0);
+
+        // 添加完成步骤
+        steps.push({
+            array: [...arr], type: 'complete', line: 8, depth: 0,
+            op: '排序完成！所有元素已就位',
+            states: { completed: Array.from({length: arr.length}, (_, i) => i) },
+            range: [0, arr.length - 1],
+            totalComparisons: totalComparisons,
+            totalSwaps: totalSwaps
+        });
+
+        animationSteps = steps;
+    }
+
+    /*
+    ============================================================
+    第四部分：步骤执行与控制函数
+    ------------------------------------------------------------
+    思路说明：
+    stepForward() 是核心回放函数，每次调用取出 animationSteps
+    中的下一步，更新数组状态、柱状图、代码高亮、信息面板。
+    startAutoRun / pauseAutoRun 通过 setInterval 实现自动播放。
+    用户行为（查看步骤数）同时被记录到 userProfile 中，
+    为后续的个性化分析提供数据。
+    ============================================================
+    */
+
+    // 开始排序（点击"开始"按钮后启用单步/自动按钮）
+    function startSorting() {
+        if (originalArray.length === 0) { alert('请先生成或输入数据'); return; }
+        isStarted = true;
+        startTime = Date.now();
+        startBtn.disabled = true;
+        stepBtn.disabled = false;
+        autoBtn.disabled = false;
+    }
+
+    // 单步执行
+    function stepForward() {
+        if (!isStarted) { alert('请先点击"开始"按钮'); return; }
+        if (currentStep >= animationSteps.length) {
+            updateStatus('排序已完成');
+            showCompletionMessage();
+            return;
+        }
+
+        const step = animationSteps[currentStep];
+        currentArray = [...step.array];
+
+        // 更新界面信息
+        updateStatus('执行中');
+        updateCurrentOp(step.op);
+        updateCurrentLine(step.line);
+        recursionDepthDisplay.textContent = step.depth || 0;
+        updateRunTime(Date.now() - startTime);
+
+        // 高亮对应代码行
+        highlightCodeLine(step.line);
+
+        // 渲染柱状图，传入当前步骤的状态
+        renderBars(step.states || {});
+
+        // 如果是分区完成步骤，添加统计行
+        if (step.type === 'partition-done' && step.stats) {
+            addStatsRow(step.stats);
+        }
+
+        // 排序完成
+        if (step.type === 'complete') {
+            stepBtn.disabled = true;
+            autoBtn.disabled = true;
+            pauseBtn.disabled = true;
+            showCompletionMessage();
+            updateSummary(step.totalComparisons, step.totalSwaps);
+            // 记录用户完成了一次排序
+            userProfile.completedRuns++;
+            // 触发个性化分析更新
+            updateAnalysis();
+        }
+
+        // 记录用户行为：每查看一步，totalStepsViewed +1
+        userProfile.totalStepsViewed++;
+        currentStep++;
+    }
+
+    // 自动运行
+    function startAutoRun() {
+        if (!isStarted || isAutoRunning) return;
+        isAutoRunning = true;
+        stepBtn.disabled = true;
+        autoBtn.disabled = true;
+        pauseBtn.disabled = false;
+        const speed = parseInt(speedSlider.value);
+        animationInterval = setInterval(() => {
+            stepForward();
+            if (currentStep >= animationSteps.length) pauseAutoRun();
+        }, speed);
+    }
+
+    // 暂停自动运行
+    function pauseAutoRun() {
+        if (!isAutoRunning) return;
+        clearInterval(animationInterval);
+        isAutoRunning = false;
+        if (currentStep < animationSteps.length) {
+            stepBtn.disabled = false;
+            autoBtn.disabled = false;
+        }
+        pauseBtn.disabled = true;
+    }
+
+    // 重置所有状态
+    function resetAll() {
+        pauseAutoRun();
+        currentArray = [...originalArray];
+        currentStep = 0;
+        startTime = 0;
+        isStarted = false;
+        completedIndicesSet = new Set();
+        renderBars();
+        updateStatus('已重置');
+        updateCurrentOp('-');
+        updateCurrentLine('-');
+        recursionDepthDisplay.textContent = '0';
+        updateRunTime(0);
+        statsBody.innerHTML = '';
+        summaryDisplay.innerHTML = '';
+        resetCodeHighlight();
+        startBtn.disabled = false;
+        stepBtn.disabled = true;
+        autoBtn.disabled = true;
+        pauseBtn.disabled = true;
+    }
+
+    // 更新速度显示，如果正在自动运行则重启定时器
+    function updateSpeed() {
+        speedValue.textContent = speedSlider.value + 'ms';
+        if (isAutoRunning) { pauseAutoRun(); startAutoRun(); }
+    }
+
+    // --- 界面更新辅助函数 ---
+    function updateStatus(s) { statusDisplay.textContent = s; }
+    function updateCurrentOp(s) { currentOpDisplay.textContent = s; }
+    function updateCurrentLine(l) { currentLineDisplay.textContent = l; }
+    function updateRunTime(t) { runTimeDisplay.textContent = t + ' ms'; }
+
+    // 高亮代码行
+    function highlightCodeLine(lineNum) {
+        codeLines.forEach(el => el.classList.remove('highlight'));
+        if (lineNum >= 1 && lineNum <= codeLines.length) {
+            const target = codeLines[lineNum - 1];
+            target.classList.add('highlight');
+            // 滚动到可见区域
+            target.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+    }
+    function resetCodeHighlight() {
+        codeLines.forEach(el => el.classList.remove('highlight'));
+    }
+
+    // 添加统计表格行
+    function addStatsRow(stats) {
+        const row = document.createElement('tr');
+        row.innerHTML = `<td>${stats.id}</td><td>${stats.range}</td><td>${stats.pivot}</td>` +
+            `<td>${stats.comparisons}</td><td>${stats.swaps}</td><td>${stats.depth}</td>`;
+        statsBody.appendChild(row);
+    }
+
+    // 更新统计摘要
+    function updateSummary(comparisons, swaps) {
+        summaryDisplay.innerHTML =
+            `<div class="summary-item"><div class="summary-label">总比较次数:</div><div class="summary-value">${comparisons}</div></div>` +
+            `<div class="summary-item"><div class="summary-label">总交换次数:</div><div class="summary-value">${swaps}</div></div>` +
+            `<div class="summary-item"><div class="summary-label">数组大小:</div><div class="summary-value">${originalArray.length}</div></div>`;
+    }
+
+    // 显示完成消息
+    function showCompletionMessage() {
+        completionMessage.style.display = 'block';
+        setTimeout(() => { completionMessage.style.display = 'none'; }, 3000);
+    }
+
+    // --- 笔记功能 ---
+    function saveNotes() {
+        const notes = notesTextarea.value;
+        if (!notes) { alert('笔记内容为空'); return; }
+        const blob = new Blob([notes], { type: 'text/plain' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = '快速排序学习笔记.txt';
+        a.click();
+        URL.revokeObjectURL(a.href);
+    }
+    function loadNotes() {
+        const input = document.createElement('input');
+        input.type = 'file'; input.accept = 'text/plain';
+        input.onchange = e => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = ev => { notesTextarea.value = ev.target.result; };
+            reader.readAsText(file);
+        };
+        input.click();
+    }
+    function clearNotes() {
+        if (confirm('确定要清空笔记吗？')) notesTextarea.value = '';
+    }
+
+    /*
+    ============================================================
+    第五部分：功能1 - 代码行标注与用户个性化建模
+    ------------------------------------------------------------
+    思路说明：
+    用户可以点击代码行右侧的 "?" 按钮来标记自己不理解的代码行。
+    点击后弹出一个小浮窗(tooltip)，用户可以输入具体疑问并保存。
+
+    实现原理：
+    1. 每个代码行都有一个 data-knowledge 属性，标明该行属于哪个
+       知识点（分治思想/基准选择/分区操作/递归调用）。
+    2. 当用户标记某行时，系统记录该行号和对应知识点。
+    3. 被标记的行说明用户对该知识点有疑问，系统据此降低该知识点
+       的掌握度评分。
+    4. 反之，用户完整运行排序、查看步骤越多，掌握度越高。
+    5. 这些数据存储在 userProfile 中，供功能3的个性化分析使用。
+
+    选择"标注"而非"停留时间"的原因：
+    - 停留时间容易受到用户离开屏幕、切换标签页等干扰，数据不可靠
+    - 主动标注是用户明确表达疑问的行为，信号更准确
+    - 实现更简单可靠，不需要复杂的计时和去噪逻辑
+    ============================================================
+    */
+
+    // 当前打开的tooltip引用，确保同时只有一个tooltip显示
+    let activeTooltip = null;
+
+    // 初始化代码行标注功能
+    function initCodeMarking() {
+        codeLines.forEach(lineEl => {
+            const markBtn = lineEl.querySelector('.mark-icon');
+            if (!markBtn) return;
+
+            markBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const lineNum = parseInt(lineEl.dataset.line);
+                const knowledge = lineEl.dataset.knowledge || '未分类';
+
+                // 如果该行已有标注，点击后显示已有内容并允许编辑
+                if (userMarks[lineNum]) {
+                    showMarkTooltip(lineEl, lineNum, knowledge, userMarks[lineNum].note);
+                } else {
+                    showMarkTooltip(lineEl, lineNum, knowledge, '');
+                }
+            });
+        });
+
+        // 点击页面其他地方关闭tooltip
+        document.addEventListener('click', function(e) {
+            if (activeTooltip && !activeTooltip.contains(e.target)) {
+                closeActiveTooltip();
+            }
+        });
+    }
+
+    // 显示标注浮窗
+    function showMarkTooltip(lineEl, lineNum, knowledge, existingNote) {
+        // 先关闭已有的tooltip
+        closeActiveTooltip();
+
+        const tooltip = document.createElement('div');
+        tooltip.className = 'mark-tooltip';
+        tooltip.innerHTML =
+            `<div style="font-weight:bold;color:#5c6bc0;margin-bottom:4px;">第 ${lineNum} 行 · ${knowledge}</div>` +
+            `<textarea placeholder="描述你的疑问...">${existingNote}</textarea>` +
+            `<div class="tooltip-btns">` +
+            `  <button class="btn-mark-cancel">取消</button>` +
+            `  <button class="btn-mark-save">保存标注</button>` +
+            `</div>`;
+
+        // 保存按钮事件
+        tooltip.querySelector('.btn-mark-save').addEventListener('click', function() {
+            const note = tooltip.querySelector('textarea').value.trim();
+            if (!note) { alert('请输入疑问内容'); return; }
+
+            // 保存标注数据
+            userMarks[lineNum] = {
+                line: lineNum,
+                knowledge: knowledge,
+                note: note,
+                timestamp: new Date().toLocaleString()
+            };
+
+            // 给代码行添加已标注样式
+            lineEl.classList.add('user-marked');
+
+            // 更新用户画像：记录标记的行号
+            if (!userProfile.markedLines.includes(lineNum)) {
+                userProfile.markedLines.push(lineNum);
+            }
+
+            // 将标注内容同步到笔记区域
+            notesTextarea.value += `[疑问标注] 第${lineNum}行(${knowledge}): ${note}\n`;
+
+            // 触发个性化分析更新
+            updateAnalysis();
+
+            closeActiveTooltip();
+        });
+
+        // 取消按钮事件
+        tooltip.querySelector('.btn-mark-cancel').addEventListener('click', function() {
+            closeActiveTooltip();
+        });
+
+        // 阻止tooltip内部点击冒泡
+        tooltip.addEventListener('click', function(e) { e.stopPropagation(); });
+
+        lineEl.appendChild(tooltip);
+        tooltip.style.display = 'block';
+        activeTooltip = tooltip;
+
+        // 聚焦到文本框
+        tooltip.querySelector('textarea').focus();
+    }
+
+    // 关闭当前打开的tooltip
+    function closeActiveTooltip() {
+        if (activeTooltip) {
+            activeTooltip.remove();
+            activeTooltip = null;
+        }
+    }
+
+    /*
+    ============================================================
+    第六部分：功能2 - AI智能助手对话框
+    ------------------------------------------------------------
+    思路说明：
+    实现一个文本交互框，用户可以输入关于快速排序的问题。
+
+    AI回答的实现方式：
+    1. 优先尝试调用后端 Flask API（/api/chat），由后端转发给
+       真正的AI服务（如OpenAI/通义千问等）。
+    2. 如果后端不可用（比如直接打开HTML文件），则使用本地的
+       关键词匹配规则引擎作为降级方案，确保离线也能用。
+
+    本地规则引擎的原理：
+    - 预定义一组关于快速排序的常见问题和对应回答
+    - 通过关键词匹配用户输入，找到最相关的回答
+    - 虽然不如真正的AI智能，但覆盖了快速排序的核心知识点，
+      对于学习场景已经足够实用
+
+    同时，用户的提问行为会被记录到 userProfile 中：
+    - questionsAsked 计数+1
+    - questionTopics 记录提问涉及的知识点
+    这些数据用于功能3的个性化分析
+    ============================================================
+    */
+
+    // 预定义的快速排序知识库（本地降级方案）
+    const qaKnowledgeBase = [
+        {
+            keywords: ['时间复杂度', '复杂度', '效率', '快不快', '性能'],
+            topic: '复杂度分析',
+            answer: '快速排序的平均时间复杂度是 O(n log n)，这是比较排序算法的理论最优。最坏情况（数组已有序且每次选第一个/最后一个为基准）时间复杂度退化为 O(n²)。空间复杂度为 O(log n)，主要来自递归调用栈。在实际应用中，快速排序通常是最快的通用排序算法之一。'
+        },
+        {
+            keywords: ['基准', 'pivot', '选择基准', '怎么选'],
+            topic: '基准选择',
+            answer: '基准(Pivot)的选择直接影响快速排序的效率。常见策略有：\n1. 选最后一个元素（本演示采用的方式，实现简单）\n2. 选第一个元素（同样简单，但对有序数组表现差）\n3. 随机选择（避免最坏情况，实际中常用）\n4. 三数取中法（取首、中、尾三个元素的中位数，效果好）\n\n好的基准应该尽量将数组等分为两半，这样递归树最平衡，效率最高。'
+        },
+        {
+            keywords: ['分区', 'partition', '怎么分', '划分'],
+            topic: '分区操作',
+            answer: '分区(Partition)是快速排序的核心操作。本演示使用 Lomuto 分区方案：\n1. 选最后一个元素为基准 pivot\n2. 维护指针 i，指向"小于等于pivot区域"的末尾\n3. 用指针 j 从左到右扫描数组\n4. 如果 arr[j] <= pivot，就把 i 右移一位，然后交换 arr[i] 和 arr[j]\n5. 扫描完成后，把 pivot 放到 i+1 的位置\n\n这样 pivot 左边都 <= pivot，右边都 > pivot。'
+        },
+        {
+            keywords: ['递归', '为什么递归', '递归调用', '怎么递归'],
+            topic: '递归调用',
+            answer: '快速排序使用递归实现分治策略：\n1. 对数组进行一次分区，基准元素就位\n2. 对基准左边的子数组递归调用快速排序\n3. 对基准右边的子数组递归调用快速排序\n\n递归终止条件：当子数组长度 <= 1 时（即 low >= high），不需要再排序。\n\n递归深度最好情况是 O(log n)（每次等分），最坏是 O(n)（每次只减少一个元素）。'
+        },
+        {
+            keywords: ['分治', '思想', '原理', '为什么快'],
+            topic: '分治思想',
+            answer: '快速排序体现了经典的分治(Divide and Conquer)思想：\n1. 分(Divide)：通过分区操作，将问题分成两个更小的子问题\n2. 治(Conquer)：递归地对两个子数组排序\n3. 合(Combine)：由于是原地排序，分区完成后数组自然有序，无需额外合并\n\n分治的关键优势：将 O(n²) 的问题分解为两个 O(n/2) 的子问题，总工作量降为 O(n log n)。'
+        },
+        {
+            keywords: ['稳定', '稳定性', '稳定排序'],
+            topic: '复杂度分析',
+            answer: '快速排序是不稳定的排序算法。所谓"不稳定"是指：如果数组中有两个相等的元素，排序后它们的相对顺序可能改变。\n\n例如：[3a, 2, 3b, 1] 排序后可能变成 [1, 2, 3b, 3a]，3a和3b的顺序反了。\n\n如果需要稳定排序，可以考虑归并排序(Merge Sort)。'
+        },
+        {
+            keywords: ['冒泡', '比较', '区别', '不同', '对比', '和'],
+            topic: '复杂度分析',
+            answer: '快速排序 vs 冒泡排序：\n- 时间复杂度：快排平均 O(n log n)，冒泡 O(n²)\n- 空间复杂度：快排 O(log n)，冒泡 O(1)\n- 稳定性：快排不稳定，冒泡稳定\n- 实际性能：快排远快于冒泡，是实际应用中最常用的排序算法之一\n- 思想：快排用分治，冒泡用相邻比较交换\n\n对于大数据量，快速排序的优势非常明显。'
+        },
+        {
+            keywords: ['交换', 'swap', '怎么交换'],
+            topic: '分区操作',
+            answer: '在本演示的代码中，交换使用了 JavaScript 的解构赋值语法：\n[arr[i], arr[j]] = [arr[j], arr[i]]\n\n这等价于：\nlet temp = arr[i];\narr[i] = arr[j];\narr[j] = temp;\n\n交换发生在两个地方：\n1. 分区过程中，将小于基准的元素交换到左边（第17行）\n2. 分区结束后，将基准放到正确位置（第20行）'
+        },
+        {
+            keywords: ['最坏', '退化', 'worst', '有序'],
+            topic: '复杂度分析',
+            answer: '快速排序的最坏情况发生在每次分区都极度不平衡时：\n- 数组已经有序（升序或降序），且每次选第一个或最后一个为基准\n- 此时每次分区只能减少一个元素，递归深度达到 n\n- 时间复杂度退化为 O(n²)\n\n避免最坏情况的方法：\n1. 随机选择基准\n2. 三数取中法\n3. 对小数组切换到插入排序'
+        }
+    ];
+
+    // 发送消息到AI
+    function sendChatMessage() {
+        const text = chatInput.value.trim();
+        if (!text) return;
+
+        // 显示用户消息
+        appendChatMsg('user', text);
+        chatInput.value = '';
+        chatSendBtn.disabled = true;
+
+        // 记录用户提问行为
+        userProfile.questionsAsked++;
+
+        // 显示"正在思考"
+        const typingEl = document.createElement('div');
+        typingEl.className = 'typing-indicator';
+        typingEl.textContent = 'AI正在思考...';
+        chatMessages.appendChild(typingEl);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+
+        // 尝试调用后端API，失败则使用本地知识库
+        tryBackendChat(text).then(response => {
+            typingEl.remove();
+            appendChatMsg('ai', response.answer);
+            if (response.topic) {
+                userProfile.questionTopics.push(response.topic);
+            }
+            chatSendBtn.disabled = false;
+            // 更新个性化分析
+            updateAnalysis();
+        });
+    }
+
+    // 尝试调用后端API
+    async function tryBackendChat(question) {
+        try {
+            // 尝试调用Flask后端的AI接口
+            const resp = await fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ question: question, context: 'quicksort' })
+            });
+            if (resp.ok) {
+                const data = await resp.json();
+                if (data.success) {
+                    return { answer: data.answer, topic: data.topic || '' };
+                }
+            }
+            // 后端返回错误，降级到本地
+            return localChat(question);
+        } catch (e) {
+            // 网络错误（比如直接打开HTML文件），降级到本地
+            return localChat(question);
+        }
+    }
+
+    // 本地关键词匹配回答（降级方案）
+    function localChat(question) {
+        const q = question.toLowerCase();
+        let bestMatch = null;
+        let bestScore = 0;
+
+        for (const qa of qaKnowledgeBase) {
+            let score = 0;
+            for (const kw of qa.keywords) {
+                if (q.includes(kw)) score++;
+            }
+            if (score > bestScore) {
+                bestScore = score;
+                bestMatch = qa;
+            }
+        }
+
+        if (bestMatch && bestScore > 0) {
+            return { answer: bestMatch.answer, topic: bestMatch.topic };
+        }
+
+        // 没有匹配到，给出通用回答
+        return {
+            answer: '这是一个好问题！关于快速排序，你可以尝试问我以下方面的问题：\n' +
+                '- 时间复杂度和空间复杂度\n- 基准(Pivot)的选择策略\n' +
+                '- 分区(Partition)操作的原理\n- 递归调用的过程\n' +
+                '- 与冒泡排序的区别\n- 最坏情况及优化方法\n- 稳定性问题',
+            topic: ''
+        };
+    }
+
+    // 添加聊天消息到界面
+    function appendChatMsg(role, text) {
+        const msg = document.createElement('div');
+        msg.className = 'chat-msg ' + role;
+        // 将换行符转为<br>以正确显示
+        msg.innerHTML = text.replace(/\n/g, '<br>');
+        chatMessages.appendChild(msg);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    /*
+    ============================================================
+    第七部分：功能3 - 个性化学习分析与推荐
+    ------------------------------------------------------------
+    思路说明：
+    根据用户在页面上的学习行为数据，实时计算各知识点的掌握度，
+    并生成个性化的学习建议。
+
+    掌握度计算模型（简化版认知诊断）：
+    每个知识点的掌握度由以下因素综合决定：
+    1. 正向因素（提升掌握度）：
+       - 查看了多少排序步骤（说明用户在认真学习）
+       - 完成了几次完整排序（说明用户有实践）
+       - 向AI提问了相关问题（说明用户在主动探索）
+    2. 负向因素（降低掌握度）：
+       - 标注了该知识点相关的代码行有疑问
+
+    最终掌握度 = 基础分 + 步骤加分 + 完成加分 + 提问加分 - 疑问扣分
+    结果限制在 0~100 之间。
+
+    推荐算法：
+    根据掌握度从低到高排序，优先推荐掌握度最低的知识点，
+    并给出具体的学习建议和难度标签。
+    ============================================================
+    */
+
+    // 更新个性化分析面板（每次用户行为变化时调用）
+    function updateAnalysis() {
+        // 第一步：计算各知识点掌握度
+        calculateSkillScores();
+        // 第二步：更新掌握度进度条UI
+        renderSkillBars();
+        // 第三步：生成并显示学习建议
+        renderRecommendations();
+    }
+
+    // 计算各知识点的掌握度评分
+    function calculateSkillScores() {
+        const scores = userProfile.skillScores;
+
+        // 基础分：用户开始学习就给一个底分
+        const baseScore = userProfile.totalStepsViewed > 0 ? 10 : 0;
+
+        // 步骤查看加分：查看越多步骤，说明学习越深入
+        // 总步骤数通常在30-80之间，按比例给分（最高30分）
+        const totalSteps = animationSteps.length || 1;
+        const stepBonus = Math.min(30, Math.round((userProfile.totalStepsViewed / totalSteps) * 30));
+
+        // 完成排序加分：每完成一次给15分，最高30分
+        const completeBonus = Math.min(30, userProfile.completedRuns * 15);
+
+        // 对每个知识点分别计算
+        for (const [knowledge, lines] of Object.entries(knowledgeMap)) {
+            let score = baseScore + stepBonus + completeBonus;
+
+            // 提问加分：如果用户向AI提问了相关主题，说明在主动学习（+15分）
+            if (userProfile.questionTopics.includes(knowledge)) {
+                score += 15;
+            }
+
+            // 疑问扣分：如果用户标注了该知识点的代码行有疑问，扣分
+            // 每标注一行扣10分
+            let markedCount = 0;
+            for (const lineNum of userProfile.markedLines) {
+                if (lines.includes(lineNum)) {
+                    markedCount++;
+                }
+            }
+            score -= markedCount * 10;
+
+            // 特殊处理"复杂度分析"：没有对应代码行，通过提问来评估
+            if (knowledge === '复杂度分析') {
+                const complexityQuestions = userProfile.questionTopics.filter(t => t === '复杂度分析').length;
+                score += complexityQuestions * 10;
+            }
+
+            // 限制在 0~100
+            scores[knowledge] = Math.max(0, Math.min(100, score));
+        }
+    }
+
+    // 渲染掌握度进度条
+    function renderSkillBars() {
+        const container = $('skill-bars');
+        const scores = userProfile.skillScores;
+        const colors = {
+            '分治思想': '#4CAF50',
+            '基准选择': '#2196F3',
+            '分区操作': '#FF9800',
+            '递归调用': '#9C27B0',
+            '复杂度分析': '#E91E63'
+        };
+
+        container.innerHTML = '';
+        for (const [name, score] of Object.entries(scores)) {
+            const color = colors[name] || '#999';
+            container.innerHTML +=
+                `<div class="skill-bar">` +
+                `  <span class="skill-name">${name}</span>` +
+                `  <div class="bar-track"><div class="bar-fill" style="width:${score}%;background:${color};"></div></div>` +
+                `  <span class="skill-val">${score}%</span>` +
+                `</div>`;
+        }
+    }
+
+    // 生成个性化学习建议
+    function renderRecommendations() {
+        const list = $('recommendation-list');
+        const scores = userProfile.skillScores;
+
+        // 按掌握度从低到高排序
+        const sorted = Object.entries(scores).sort((a, b) => a[1] - b[1]);
+
+        // 推荐建议模板
+        const adviceMap = {
+            '分治思想': '建议重新阅读算法思想面板，理解"分而治之"的核心：先分区，再递归处理子问题。',
+            '基准选择': '试着思考：如果选不同的元素作为基准，分区结果会怎样？可以向AI助手提问"基准选择策略"。',
+            '分区操作': '分区是快速排序最关键的步骤。建议用单步模式仔细观察第11-22行代码的执行过程。',
+            '递归调用': '递归可能比较抽象。建议关注第5-6行，观察排序是如何被分解为更小的子问题的。',
+            '复杂度分析': '试着向AI助手提问"时间复杂度"或"最坏情况"，深入理解快速排序的性能特征。'
+        };
+
+        let html = '';
+        for (const [name, score] of sorted) {
+            let tag, tagClass;
+            if (score >= 70) { tag = '掌握良好'; tagClass = 'easy'; }
+            else if (score >= 40) { tag = '需要加强'; tagClass = 'medium'; }
+            else { tag = '建议重点学习'; tagClass = 'hard'; }
+
+            html += `<li><span class="rec-tag ${tagClass}">${tag}</span> <b>${name}</b>(${score}%) - ${adviceMap[name]}</li>`;
+        }
+
+        if (!html) {
+            html = '<li>请先开始排序演示，系统将根据你的学习行为生成个性化建议。</li>';
+        }
+
+        list.innerHTML = html;
+    }
+
+    /*
+    ============================================================
+    第八部分：初始化函数
+    ------------------------------------------------------------
+    思路说明：
+    init() 在页面加载完成后执行，负责：
+    1. 绑定所有按钮的事件监听器
+    2. 初始化功能1的代码行标注
+    3. 初始化功能2的AI对话框
+    4. 渲染初始状态
+    ============================================================
+    */
+
+    function init() {
+        // 数据输入按钮
+        $('random-btn').addEventListener('click', generateRandomData);
+        $('manual-btn').addEventListener('click', toggleManualInput);
+        $('submit-btn').addEventListener('click', submitManualData);
+
+        // 控制按钮
+        startBtn.addEventListener('click', startSorting);
+        stepBtn.addEventListener('click', stepForward);
+        autoBtn.addEventListener('click', startAutoRun);
+        pauseBtn.addEventListener('click', pauseAutoRun);
+        resetBtn.addEventListener('click', resetAll);
+        speedSlider.addEventListener('input', updateSpeed);
+
+        // 笔记按钮
+        $('save-btn').addEventListener('click', saveNotes);
+        $('load-btn').addEventListener('click', loadNotes);
+        $('clear-btn').addEventListener('click', clearNotes);
+
+        // 功能1：初始化代码行标注
+        initCodeMarking();
+
+        // 功能2：AI对话框事件
+        chatSendBtn.addEventListener('click', sendChatMessage);
+        chatInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendChatMessage();
+            }
+        });
+
+        // 功能3：初始化分析面板
+        renderSkillBars();
+        renderRecommendations();
+
+        // 初始渲染
+        renderBars();
+        updateSpeed();
+    }
+
+    // 页面加载完成后初始化
+    init();
+    </script>
+    </script>
+</body>
+</html>
