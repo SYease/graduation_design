@@ -1,0 +1,239 @@
+{% extends 'base.html' %}
+{% block title %}个人学习页{% endblock %}
+{% block head %}
+<style>
+  .profile-header { background: linear-gradient(135deg, #0f172a, #0f766e); color:#e2e8f0; border:none; }
+  .profile-header h2 { margin:0 0 8px; }
+  .stat-card { text-align:center; padding:14px; }
+  .stat-num { font-size:28px; font-weight:700; }
+  .stat-label { font-size:12px; color:#5f6b82; margin-top:4px; }
+  .skill-bar-wrap { display:flex; align-items:center; gap:10px; margin-bottom:6px; }
+  .skill-bar-label { width:90px; font-size:12px; font-weight:600; text-align:right; flex-shrink:0; }
+  .skill-bar-track { flex:1; height:18px; background:#e5e7eb; border-radius:9px; overflow:hidden; }
+  .skill-bar-fill { height:100%; border-radius:9px; transition:width .5s; display:flex; align-items:center; padding-left:8px; font-size:10px; font-weight:700; color:#fff; }
+  .record-item { display:flex; gap:12px; padding:10px 0; border-bottom:1px solid #f1f5f9; align-items:flex-start; }
+  .record-item:last-child { border-bottom:none; }
+  .record-dot { width:10px; height:10px; border-radius:50%; margin-top:5px; flex-shrink:0; }
+  .record-dot.mark { background:#f59e0b; }
+  .record-dot.view { background:#3b82f6; }
+  .record-dot.complete { background:#16a34a; }
+  .record-body { flex:1; }
+  .record-desc { font-size:13px; line-height:1.5; }
+  .record-time { font-size:11px; color:#94a3b8; margin-top:2px; }
+  .record-meta { font-size:12px; color:#64748b; margin-top:4px; background:#f8fbff; border-radius:6px; padding:4px 8px; }
+  #recordList { max-height:600px; overflow:auto; }
+  #miniGraph { width:100%; border-radius:8px; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="card profile-header" style="margin-bottom:12px">
+  <h2>个人学习画像</h2>
+  <p style="margin:0">汇总学习进度、掌握度与历史行为，形成持续优化闭环。</p>
+</div>
+
+<div class="row" style="margin-bottom:12px">
+  <div class="col card stat-card"><div class="stat-num" id="statQuestions">0</div><div class="stat-label">提问次数</div></div>
+  <div class="col card stat-card"><div class="stat-num" id="statRuns">0</div><div class="stat-label">完成演示次数</div></div>
+  <div class="col card stat-card"><div class="stat-num" id="statMarks">0</div><div class="stat-label">标记疑问行数</div></div>
+  <div class="col card stat-card"><div class="stat-num" id="statRecords">0</div><div class="stat-label">学习行为记录</div></div>
+</div>
+
+<div class="row" style="margin-bottom:12px">
+  <div class="col card" style="flex:1.2">
+    <h3 style="margin:0 0 8px">掌握度</h3>
+    <div id="skillBars"><span class="muted">暂无数据，请先在算法学习页完成分析。</span></div>
+    <h3 style="margin:16px 0 8px">已掌握知识图谱</h3>
+    <svg id="miniGraph"></svg>
+    <div id="miniGraphEmpty" class="muted" style="display:none;padding:10px">暂无掌握度数据</div>
+  </div>
+  <div class="col card" style="flex:1">
+    <h3 style="margin:0 0 8px">学习记录</h3>
+    <ul id="recordList" style="padding:0;margin:0;list-style:none"></ul>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let kgNodes = [], kgEdges = [];
+
+const topicToCode = {
+  '最小生成树目标':'mst-goal','边排序':'edge-sorting','成环判断':'cycle-detection',
+  '并查集合并':'union-find','选边与终止':'kruskal-core','复杂度分析':'complexity-analysis',
+  '快速排序':'quick-sort','归并排序':'merge-sort','动态规划入门':'dp-intro',
+  'BFS遍历':'bfs-traversal','DFS遍历':'dfs-traversal','Dijkstra最短路径':'dijkstra-algorithm',
+  'Prim算法':'prim-algorithm','01背包问题':'knapsack-01','二叉树基础':'binary-tree',
+};
+
+function formatTime(iso){
+  if(!iso) return '';
+  const d = new Date(iso), now = new Date();
+  const diff = now - d;
+  if(diff < 60000) return '刚刚';
+  if(diff < 3600000) return Math.floor(diff/60000) + ' 分钟前';
+  if(diff < 86400000) return Math.floor(diff/3600000) + ' 小时前';
+  if(diff < 172800000) return '昨天 ' + d.toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
+  return d.toLocaleDateString('zh-CN') + ' ' + d.toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
+}
+
+function describeAction(r){
+  const type = r.action_type, data = r.action_data || {};
+  if(type === 'mark_line'){
+    return {desc: `标记了第 <b>${data.line||'?'}</b> 行代码不理解`, dot:'mark', meta: data.knowledge ? `相关知识点：${data.knowledge}` : ''};
+  }
+  if(type === 'view_step') return {desc:'观看了算法可视化演示', dot:'view', meta:''};
+  if(type === 'complete_sort' || type === 'complete_run') return {desc:'完成了一次完整的算法演示', dot:'complete', meta:''};
+  const keys = Object.keys(data);
+  return {desc:type, dot:'view', meta: keys.length ? keys.map(k => `${k}: ${data[k]}`).join(', ') : ''};
+}
+
+function renderMiniGraph(skills){
+  const svg = document.getElementById('miniGraph');
+  const empty = document.getElementById('miniGraphEmpty');
+  svg.innerHTML = ''; empty.style.display = 'none';
+
+  // Map topic names to kg codes and find matching nodes
+  const skillTopics = Object.keys(skills);
+  const matchedCodes = new Set();
+  skillTopics.forEach(t => { const c = topicToCode[t]; if(c) matchedCodes.add(c); });
+  if(matchedCodes.size === 0){ empty.style.display = 'block'; return; }
+
+  // Filter nodes and edges for this subgraph
+  const subNodes = kgNodes.filter(n => matchedCodes.has(n.code));
+  const subNodeCodes = new Set(subNodes.map(n => n.code));
+  const subEdges = kgEdges.filter(e => {
+    const sn = kgNodes.find(n => n.id === e.source_node_id);
+    const tn = kgNodes.find(n => n.id === e.target_node_id);
+    return sn && tn && subNodeCodes.has(sn.code) && subNodeCodes.has(tn.code);
+  });
+
+  if(subNodes.length === 0){ empty.style.display = 'block'; return; }
+
+  // Simple layered layout: assign levels by BFS from roots
+  const adj = {}, indeg = {};
+  subNodes.forEach(n => { adj[n.code] = []; indeg[n.code] = 0; });
+  subEdges.forEach(e => {
+    const sn = kgNodes.find(n => n.id === e.source_node_id);
+    const tn = kgNodes.find(n => n.id === e.target_node_id);
+    if(sn && tn){ adj[sn.code].push(tn.code); indeg[tn.code]++; }
+  });
+
+  const level = {}, q = [];
+  subNodes.forEach(n => { if(indeg[n.code] === 0){ level[n.code] = 0; q.push(n.code); } });
+  if(q.length === 0 && subNodes.length > 0){ level[subNodes[0].code] = 0; q.push(subNodes[0].code); }
+  while(q.length > 0){
+    const c = q.shift();
+    (adj[c]||[]).forEach(next => {
+      const cand = level[c] + 1;
+      if(!(next in level) || level[next] < cand){ level[next] = cand; q.push(next); }
+    });
+  }
+  const maxLvl = Math.max(...Object.values(level), 0);
+  subNodes.forEach(n => { if(!(n.code in level)) level[n.code] = maxLvl + 1; });
+
+  // Group by level
+  const groups = {};
+  subNodes.forEach(n => { const l = level[n.code]; if(!groups[l]) groups[l] = []; groups[l].push(n); });
+  const levels = Object.keys(groups).map(Number).sort((a,b)=>a-b);
+
+  const colW = 130, rowH = 36, mx = 20, my = 16, nw = 100, nh = 28;
+  const maxPer = Math.max(...Object.values(groups).map(g=>g.length), 1);
+  const h = maxPer * rowH + my * 2;
+  const w = Math.max(levels.length * colW + mx * 2, 260);
+
+  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  svg.style.height = h + 'px';
+  svg.style.background = '#f8fbff';
+
+  // Arrow marker
+  const defs = document.createElementNS('http://www.w3.org/2000/svg','defs');
+  const m = document.createElementNS('http://www.w3.org/2000/svg','marker');
+  m.setAttribute('id','marr'); m.setAttribute('markerWidth','6'); m.setAttribute('markerHeight','5');
+  m.setAttribute('refX','6'); m.setAttribute('refY','2.5'); m.setAttribute('orient','auto');
+  const ap = document.createElementNS('http://www.w3.org/2000/svg','polygon');
+  ap.setAttribute('points','0 0, 6 2.5, 0 5'); ap.setAttribute('fill','#94a3b8');
+  m.appendChild(ap); defs.appendChild(m); svg.appendChild(defs);
+
+  // Position map
+  const pos = {};
+  levels.forEach((lvl, li) => {
+    const gn = groups[lvl]; const x = mx + li * colW;
+    const th = gn.length * rowH; const sy = (h - th) / 2;
+    gn.forEach((n, i) => { pos[n.code] = {x, y: sy + i * rowH + rowH/2, score: skills[n.name] || 0}; });
+  });
+
+  // Edges
+  subEdges.forEach(e => {
+    const sn = kgNodes.find(n => n.id === e.source_node_id);
+    const tn = kgNodes.find(n => n.id === e.target_node_id);
+    const s = pos[sn.code], t = pos[tn.code]; if(!s || !t) return;
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1',s.x + nw); line.setAttribute('y1',s.y); line.setAttribute('x2',t.x - 4); line.setAttribute('y2',t.y);
+    line.setAttribute('stroke','#94a3b8'); line.setAttribute('stroke-width','1.2'); line.setAttribute('marker-end','url(#marr)');
+    svg.appendChild(line);
+  });
+
+  // Nodes
+  subNodes.forEach(n => {
+    const p = pos[n.code]; if(!p) return;
+    const score = skills[n.name] || 0;
+    const fill = score >= 70 ? '#bbf7d0' : score >= 40 ? '#fde68a' : '#fecaca';
+    const stroke = score >= 70 ? '#16a34a' : score >= 40 ? '#ca8a04' : '#dc2626';
+
+    const rect = document.createElementNS('http://www.w3.org/2000/svg','rect');
+    rect.setAttribute('x',p.x); rect.setAttribute('y',p.y-nh/2); rect.setAttribute('width',nw); rect.setAttribute('height',nh); rect.setAttribute('rx','6');
+    rect.setAttribute('fill',fill); rect.setAttribute('stroke',stroke); rect.setAttribute('stroke-width','1.2');
+    svg.appendChild(rect);
+
+    const t = document.createElementNS('http://www.w3.org/2000/svg','text');
+    t.setAttribute('x',p.x + nw/2); t.setAttribute('y',p.y + 4); t.setAttribute('text-anchor','middle');
+    t.setAttribute('font-size','11'); t.setAttribute('font-weight','bold'); t.setAttribute('fill','#1e293b');
+    t.textContent = n.name.length > 5 ? n.name.slice(0,5) : n.name; svg.appendChild(t);
+  });
+}
+
+async function loadAll(){
+  const [profileRes, recordsRes, kgRes] = await Promise.all([
+    fetch('/api/profile'), fetch('/api/records'), fetch('/api/knowledge')
+  ]);
+  const pData = await profileRes.json();
+  const rData = await recordsRes.json();
+  const kgData = await kgRes.json();
+
+  if(kgData.success){ kgNodes = kgData.nodes || []; kgEdges = kgData.edges || []; }
+  if(!pData.success) return;
+  const p = pData.profile;
+
+  document.getElementById('statQuestions').textContent = p.questions_asked || 0;
+  document.getElementById('statRuns').textContent = p.completed_runs || 0;
+  document.getElementById('statMarks').textContent = (p.marked_lines || []).length;
+  document.getElementById('statRecords').textContent = (rData.records || []).length;
+
+  const skills = p.skill_scores || {};
+  const entries = Object.entries(skills);
+  const barsBox = document.getElementById('skillBars');
+  if(entries.length === 0){
+    barsBox.innerHTML = '<span class="muted">暂无掌握度数据，请先在算法学习页完成分析。</span>';
+  } else {
+    barsBox.innerHTML = entries.map(([name,score]) => {
+      const color = score >= 70 ? '#16a34a' : score >= 40 ? '#ca8a04' : '#dc2626';
+      return `<div class="skill-bar-wrap"><span class="skill-bar-label">${name}</span><div class="skill-bar-track"><div class="skill-bar-fill" style="width:${score}%;background:${color}">${score}%</div></div></div>`;
+    }).join('');
+  }
+  renderMiniGraph(skills);
+
+  const list = document.getElementById('recordList');
+  const records = rData.records || [];
+  if(records.length === 0){
+    list.innerHTML = '<li class="muted" style="padding:20px;text-align:center">暂无学习记录，去算法学习页开始学习吧。</li>';
+  } else {
+    list.innerHTML = records.map(r => {
+      const a = describeAction(r);
+      return `<li class="record-item"><div class="record-dot ${a.dot}"></div><div class="record-body"><div class="record-desc">${a.desc}</div><div class="record-time">${formatTime(r.created_at)}</div>${a.meta?`<div class="record-meta">${a.meta}</div>`:''}</div></li>`;
+    }).join('');
+  }
+}
+
+loadAll();
+</script>
+{% endblock %}

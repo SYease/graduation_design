@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% block title %}用户管理{% endblock %}
+{% block head %}
+<style>
+  .admin-header { background: linear-gradient(135deg, #111827, #0f766e); color:#e2e8f0; border:none; }
+  .admin-header h2 { margin:0 0 8px; }
+  #userTable { width:100%; border-collapse:collapse; }
+  #userTable th { text-align:left; padding:10px 12px; background:#f1f5f9; font-size:13px; color:#475569; border-bottom:2px solid #e5e7eb; }
+  #userTable td { padding:10px 12px; border-bottom:1px solid #f1f5f9; font-size:14px; }
+  #userTable tr:hover td { background:#f8fbff; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="card admin-header" style="margin-bottom:12px">
+  <h2>用户管理</h2>
+  <p style="margin:0">管理注册用户，支持重置密码等操作。</p>
+</div>
+
+<div class="card">
+  <h3 style="margin:0 0 12px">用户列表（共 {{ users|length }} 人）</h3>
+  <div style="overflow-x:auto">
+    <table id="userTable">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>用户名</th>
+          <th>角色</th>
+          <th>提问次数</th>
+          <th>完成次数</th>
+          <th>注册时间</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td>{{ u.id }}</td>
+          <td><b>{{ u.username }}</b></td>
+          <td><span class="badge {{ 'medium' if u.role == 'admin' else 'easy' }}">{{ u.role }}</span></td>
+          <td>{{ u.questions_asked }}</td>
+          <td>{{ u.completed_runs }}</td>
+          <td class="muted">{{ u.created_at[:10] if u.created_at else '-' }}</td>
+          <td>
+            <button class="btn secondary reset-btn" data-uid="{{ u.id }}" data-uname="{{ u.username }}" style="padding:4px 10px;font-size:12px">重置密码</button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="muted" style="margin-top:12px">重置后密码默认为 <b>123456</b>，用户登录后可自行修改。</p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function postJson(url, payload){
+  const res = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+  return res.json();
+}
+
+document.querySelectorAll('.reset-btn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const uid = btn.dataset.uid;
+    const uname = btn.dataset.uname;
+    if(!confirm(`确定将用户 "${uname}" 的密码重置为 123456 吗？`)) return;
+    const data = await postJson(`/api/admin/users/${uid}/reset-password`, {password: '123456'});
+    if(data.success){
+      btn.textContent = '已重置';
+      btn.disabled = true;
+      setTimeout(() => { btn.textContent = '重置密码'; btn.disabled = false; }, 2000);
+    }
+    alert(data.message || data.error || '操作完成');
+  });
+});
+</script>
+{% endblock %}

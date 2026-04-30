@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% block title %}登录 / 注册{% endblock %}
+{% block head %}
+<style>
+  .auth-wrap { max-width: 420px; margin: 40px auto 40px 56%; }
+  @media (max-width: 768px) { .auth-wrap { margin: 20px auto; } }
+  .auth-card { background:#fff; border:1px solid #dbe4f3; border-radius:16px; padding:28px 24px; box-shadow:0 12px 40px rgba(15,23,42,.1); }
+  .auth-card h2 { margin:0 0 4px; font-size:22px; }
+  .auth-card .sub { color:#5f6b82; font-size:13px; margin:0 0 20px; }
+  .auth-card label { font-size:13px; font-weight:600; color:#334155; display:block; margin-bottom:4px; }
+  .auth-card input { margin-bottom:12px; }
+  .pwd-wrap { position:relative; margin-bottom:12px; }
+  .pwd-wrap input { margin-bottom:0; width:100%; padding-right:42px; }
+  .pwd-toggle { position:absolute; right:2px; top:9px; background:none; border:none; cursor:pointer; color:#94a3b8; font-size:15px; padding:4px 8px; line-height:1; }
+  .pwd-toggle:hover { color:#475569; }
+  .auth-card .btn { width:100%; padding:11px; font-size:15px; }
+  .auth-switch { text-align:center; margin-top:16px; font-size:13px; color:#5f6b82; }
+  .auth-switch a { color:#2563eb; cursor:pointer; text-decoration:none; font-weight:600; }
+  .auth-switch a:hover { text-decoration:underline; }
+  .msg-error { background:#fee2e2;border:1px solid #fecaca;border-radius:8px;padding:8px 12px;margin-bottom:12px;color:#991b1b;font-size:13px; }
+  .msg-info { background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:8px 12px;margin-top:10px;font-size:12px;color:#92400e;display:none; }
+  #view-register { display:none; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="auth-wrap">
+  <div class="auth-card">
+
+    {% if error %}<div class="msg-error">{{ error }}</div>{% endif %}
+
+    <!-- ====== LOGIN VIEW ====== -->
+    <div id="view-login">
+      <h2>登录</h2>
+      <p class="sub">登录后可持久追踪学习进度与掌握度变化</p>
+      <form method="post" action="/login">
+        <label>昵称</label>
+        <input name="username" placeholder="输入昵称" required autocomplete="username" />
+        <label>密码</label>
+        <div class="pwd-wrap"><input name="password" type="password" placeholder="输入密码" required autocomplete="current-password" /><button type="button" class="pwd-toggle" onclick="togglePwd(this)" title="显示密码">👁</button></div>
+        <button class="btn" type="submit">登录</button>
+      </form>
+      <div class="auth-switch">没有账户？<a onclick="switchTo('register')">立即注册</a></div>
+      <div class="auth-switch"><a onclick="document.getElementById('forgotInfo').style.display='block'">忘记密码？</a></div>
+      <div class="msg-info" id="forgotInfo">密码经过加密存储，无法找回。请联系管理员在「用户管理」页面重置密码。</div>
+    </div>
+
+    <!-- ====== REGISTER VIEW ====== -->
+    <div id="view-register">
+      <h2>注册</h2>
+      <p class="sub">创建账户后可追踪学习进度</p>
+      <form method="post" action="/register" onsubmit="return validateRegister()">
+        <label>昵称</label>
+        <input name="username" id="regUser" placeholder="设置昵称（用于登录和显示）" required autocomplete="off" />
+        <label>密码</label>
+        <div class="pwd-wrap"><input name="password" id="regPwd" type="password" placeholder="设置密码（至少4位）" required autocomplete="new-password" /><button type="button" class="pwd-toggle" onclick="togglePwd(this)" title="显示密码">👁</button></div>
+        <label>确认密码</label>
+        <div class="pwd-wrap"><input name="confirm" id="regConfirm" type="password" placeholder="再次输入密码" required autocomplete="off" /><button type="button" class="pwd-toggle" onclick="togglePwd(this)" title="显示密码">👁</button></div>
+        <div id="regError" class="msg-error" style="display:none"></div>
+        <button class="btn" type="submit">注册</button>
+      </form>
+      <div class="auth-switch">已有账户？<a onclick="switchTo('login')">返回登录</a></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function togglePwd(btn){var i=btn.parentElement.querySelector('input');var is=i.type==='password';i.type=is?'text':'password';btn.textContent=is?'🙈':'👁';}
+
+function switchTo(view){
+  document.getElementById('view-login').style.display = view==='login' ? 'block' : 'none';
+  document.getElementById('view-register').style.display = view==='register' ? 'block' : 'none';
+  document.getElementById('forgotInfo').style.display = 'none';
+}
+
+function validateRegister(){
+  var pwd = document.getElementById('regPwd').value;
+  var cfm = document.getElementById('regConfirm').value;
+  var err = document.getElementById('regError');
+  if(pwd.length < 4){ err.textContent = '密码至少需要4位。'; err.style.display='block'; return false; }
+  if(pwd !== cfm){ err.textContent = '两次输入的密码不一致。'; err.style.display='block'; return false; }
+  err.style.display = 'none';
+  return true;
+}
+</script>
+{% endblock %}

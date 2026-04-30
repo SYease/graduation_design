@@ -1,0 +1,632 @@
+{% extends 'base.html' %}
+{% block title %}{{ node.name }} - 详情学习{% endblock %}
+{% block head %}
+<style>
+  .module-switcher { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+  .module-btn { background: linear-gradient(135deg, #334155, #1e293b); }
+  .module-btn.active { background: linear-gradient(135deg, #2563eb, #1d4ed8); }
+  .learn-head { background: linear-gradient(135deg, #0f172a, #1e3a8a); color:#e2e8f0; border:none; }
+  .learn-head a { color:#bfdbfe; }
+  .panel-soft { background:#f8fbff; border-color:#d9e7ff; }
+  .explanation-content h4 { margin-top:0; color:#1e40af; }
+  .explanation-content table { margin:8px 0; border-collapse:collapse; width:100%; }
+  .explanation-content th { background:#f1f5f9; text-align:left; border:1px solid #ddd; padding:6px; }
+  .explanation-content td { border:1px solid #ddd; padding:6px; }
+  .key-point { display:inline-block; background:#dbeafe; color:#1e40af; border-radius:6px; padding:4px 10px; margin:3px; font-size:13px; }
+  .concept-desc { font-size:14px; line-height:1.8; }
+  .viz-canvas { width:100%; height:360px; border:1px solid #e5e7eb; border-radius:8px; background:#f8fafc; }
+  .section-title { border-bottom:2px solid #e5e7eb; padding-bottom:6px; margin:20px 0 12px; color:#1e3a8a; }
+  .section-title:first-of-type { margin-top:0; }
+  .viz-row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:10px; }
+  .viz-row label { font-weight:500; min-width:fit-content; }
+  .viz-row select, .viz-row input { width:auto; padding:6px 10px; }
+  .code-box { background:#111827; color:#e5e7eb; border-radius:8px; padding:10px; font-family:Consolas,monospace; font-size:13px; line-height:1.6; max-height:420px; overflow:auto; }
+  .code-box .line { padding:4px 6px; border-radius:6px; cursor:pointer; }
+  .code-box .line:hover { background:rgba(255,255,255,.08); }
+  .code-box .line-num { display:inline-block; width:28px; color:#94a3b8; }
+  .code-box .mark-btn { float:right; font-size:11px; background:none; border:1px solid #64748b; color:#94a3b8; border-radius:4px; cursor:pointer; padding:0 4px; }
+  .chat-area { background:#f8fafc; border:1px solid #e5e7eb; border-radius:8px; padding:10px; }
+  .chat-msgs { min-height:160px; max-height:300px; overflow:auto; }
+  .chat-chips { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+  .chat-input-row { display:flex; gap:8px; margin-top:10px; }
+  .knowledge-panel { background:#f0f4ff; border:1px solid #bfdbfe; border-radius:8px; padding:12px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card learn-head" style="margin-bottom:12px">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
+    <div>
+      <h2 style="margin:0 0 8px">{{ node.name }}</h2>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <span class="badge {{ node.difficulty }}">难度：{{ node.difficulty }}</span>
+        <span class="badge" style="background:rgba(148,163,184,.22);color:#dbeafe">{{ node.category }}</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      {% if prerequisites %}{% for p in prerequisites[:1] %}
+        <a href="/learn/{{ p.code }}" class="btn secondary" style="padding:6px 12px;font-size:13px;color:#bfdbfe;background:rgba(59,130,246,.2);border-color:rgba(59,130,246,.3)">← {{ p.name }}</a>
+      {% endfor %}{% endif %}
+      {% if successors %}{% for s in successors[:1] %}
+        <a href="/learn/{{ s.code }}" class="btn secondary" style="padding:6px 12px;font-size:13px;color:#bfdbfe;background:rgba(59,130,246,.2);border-color:rgba(59,130,246,.3)">{{ s.name }} →</a>
+      {% endfor %}{% endif %}
+    </div>
+  </div>
+  <p style="margin-top:10px;line-height:1.7">{{ node.summary or '暂无摘要' }}</p>
+  <div class="row" style="margin-top:8px">
+    <div class="col card panel-soft"><h4>前置节点</h4>
+      {% if prerequisites %}{% for p in prerequisites %}
+        <div style="margin-bottom:6px;padding:6px 8px;background:white;border-radius:8px;border:1px solid #e5e7eb">
+          <a href="/learn/{{ p.code }}" style="font-weight:bold">{{ p.name }}</a>
+          <span class="badge {{ p.difficulty }}" style="font-size:11px;margin-left:6px">{{ p.difficulty }}</span>
+          <div class="muted" style="font-size:12px">{{ p.summary or '' }}</div>
+        </div>
+      {% endfor %}{% else %}<div class="muted">无 — 入门知识点</div>{% endif %}
+    </div>
+    <div class="col card panel-soft"><h4>后继节点</h4>
+      {% if successors %}{% for s in successors %}
+        <div style="margin-bottom:6px;padding:6px 8px;background:white;border-radius:8px;border:1px solid #e5e7eb">
+          <a href="/learn/{{ s.code }}" style="font-weight:bold">{{ s.name }}</a>
+          <span class="badge {{ s.difficulty }}" style="font-size:11px;margin-left:6px">{{ s.difficulty }}</span>
+          <div class="muted" style="font-size:12px">{{ s.summary or '' }}</div>
+        </div>
+      {% endfor %}{% else %}<div class="muted">无 — 终点知识点</div>{% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="module-switcher">
+  <button class="btn module-btn active" data-module="m-learn">学习中心</button>
+  <button class="btn module-btn" data-module="m-quiz">定向测验</button>
+  <button class="btn module-btn" data-module="m-report">学习报告</button>
+</div>
+
+<!-- ====== MERGED LEARNING CENTER ====== -->
+<div id="m-learn" class="card">
+  <!-- Section 1: Concept Explanation -->
+  <h3 class="section-title">知识点讲解</h3>
+  {% if content.get('explanation') %}
+  <div class="explanation-content concept-desc">{{ content.explanation | safe }}</div>
+  {% else %}
+  <div class="muted">该知识点的详细讲解正在编写中。</div>
+  {% endif %}
+  {% if content.get('key_points') %}
+  <div style="margin-top:12px">{% for kp in content.key_points %}<span class="key-point">{{ kp }}</span>{% endfor %}</div>
+  {% endif %}
+
+{% if content.get('has_visualization') %}
+  <!-- Section 2: Visualization -->
+  <h3 class="section-title">可视化演示</h3>
+{% if content.get('viz_type') == 'kruskal' %}
+  <div class="viz-row">
+    <label>预设图：</label><select id="preset-select"><option value="basic">基础连通图</option><option value="equal">存在相同权值</option><option value="disconnected">非连通图</option></select>
+    <button class="btn" id="v-load">加载</button><button class="btn" id="v-start">开始</button><button class="btn secondary" id="v-step">下一步</button><button class="btn secondary" id="v-auto">自动</button><button class="btn secondary" id="v-pause">暂停</button><button class="btn secondary" id="v-reset">重置</button>
+  </div>
+  <div class="row"><div class="col"><span id="v-status" class="muted">准备就绪</span></div><div class="col">已选: <b id="v-accepted">0</b> | 总权: <b id="v-weight">0</b> | 处理: <b id="v-processed">0</b></div></div>
+  <svg id="v-canvas" viewBox="0 0 780 340" class="viz-canvas"></svg>
+  <div class="row" style="margin-top:10px"><div class="col card"><h4>已排序边</h4><ul id="v-edgelist"></ul></div><div class="col card"><h4>并查集 parent 数组</h4><div id="v-ufstate" class="muted"></div></div></div>
+{% elif content.get('viz_type') == 'sorting' %}
+  <div class="viz-row">
+    <label>数据：</label><select id="preset-select"><option value="random8">随机8个</option><option value="random12">随机12个</option><option value="nearly">近乎有序</option><option value="reversed">逆序</option></select>
+    <button class="btn" id="v-load">生成数据</button><button class="btn" id="v-start">开始</button><button class="btn secondary" id="v-step">下一步</button><button class="btn secondary" id="v-auto">自动</button><button class="btn secondary" id="v-pause">暂停</button><button class="btn secondary" id="v-reset">重置</button>
+  </div>
+  <div><span id="v-status" class="muted">准备就绪</span> | 比较次数: <b id="v-compares">0</b> | 交换次数: <b id="v-swaps">0</b></div>
+  <svg id="v-canvas" viewBox="0 0 780 320" class="viz-canvas"></svg>
+{% elif content.get('viz_type') == 'graph-search' %}
+  <div class="viz-row">
+    <label>预设图：</label><select id="preset-select"><option value="tree">树形图</option><option value="grid">网格图</option><option value="random">随机连通图</option></select>
+    <label>起点：</label><select id="start-node"></select>
+    <button class="btn" id="v-load">加载</button><button class="btn" id="v-start">开始</button><button class="btn secondary" id="v-step">下一步</button><button class="btn secondary" id="v-auto">自动</button><button class="btn secondary" id="v-pause">暂停</button><button class="btn secondary" id="v-reset">重置</button>
+  </div>
+  <div><span id="v-status" class="muted">准备就绪</span> | 访问顺序: <b id="v-order"></b></div>
+  <svg id="v-canvas" viewBox="0 0 780 340" class="viz-canvas"></svg>
+{% elif content.get('viz_type') == 'dijkstra' %}
+  <div class="viz-row">
+    <label>预设图：</label><select id="preset-select"><option value="basic">基础图</option><option value="complex">复杂图</option></select>
+    <label>起点：</label><select id="start-node"></select>
+    <button class="btn" id="v-load">加载</button><button class="btn" id="v-start">开始</button><button class="btn secondary" id="v-step">下一步</button><button class="btn secondary" id="v-auto">自动</button><button class="btn secondary" id="v-pause">暂停</button><button class="btn secondary" id="v-reset">重置</button>
+  </div>
+  <div><span id="v-status" class="muted">准备就绪</span></div>
+  <svg id="v-canvas" viewBox="0 0 780 340" class="viz-canvas"></svg>
+  <div class="row" style="margin-top:10px"><div class="col card"><h4>距离表</h4><div id="v-disttable" class="muted"></div></div><div class="col card"><h4>已确定节点</h4><div id="v-donelist" class="muted"></div></div></div>
+{% elif content.get('viz_type') == 'prim' %}
+  <div class="viz-row">
+    <label>预设图：</label><select id="preset-select"><option value="basic">基础图</option><option value="complex">复杂图</option></select>
+    <label>起点：</label><select id="start-node"></select>
+    <button class="btn" id="v-load">加载</button><button class="btn" id="v-start">开始</button><button class="btn secondary" id="v-step">下一步</button><button class="btn secondary" id="v-auto">自动</button><button class="btn secondary" id="v-pause">暂停</button><button class="btn secondary" id="v-reset">重置</button>
+  </div>
+  <div><span id="v-status" class="muted">准备就绪</span> | MST总权: <b id="v-mstweight">0</b></div>
+  <svg id="v-canvas" viewBox="0 0 780 340" class="viz-canvas"></svg>
+{% elif content.get('viz_type') == 'tree' %}
+  <div class="viz-row">
+    <label>操作：</label><select id="preset-select"><option value="insert">插入序列</option><option value="traverse">遍历演示</option></select>
+    <label>数据：</label><input id="tree-input" value="50,30,70,20,40,60,80" style="width:200px"/>
+    <button class="btn" id="v-load">执行</button><button class="btn secondary" id="v-step">下一步</button><button class="btn secondary" id="v-auto">自动</button><button class="btn secondary" id="v-reset">重置</button>
+  </div>
+  <div><span id="v-status" class="muted">准备就绪</span></div>
+  <svg id="v-canvas" viewBox="0 0 780 360" class="viz-canvas"></svg>
+{% elif content.get('viz_type') == 'dp-table' %}
+  <div class="viz-row">
+    <label>示例：</label><select id="preset-select"><option value="basic">基础示例 W=5, n=3</option><option value="larger">较大示例 W=8, n=4</option></select>
+    <button class="btn" id="v-load">生成</button><button class="btn secondary" id="v-step">下一步</button><button class="btn secondary" id="v-auto">自动</button><button class="btn secondary" id="v-reset">重置</button>
+  </div>
+  <div><span id="v-status" class="muted">准备就绪</span> | 当前: <b id="v-cell"></b></div>
+  <svg id="v-canvas" viewBox="0 0 780 380" class="viz-canvas"></svg>
+  <div id="v-dpinfo" class="muted" style="margin-top:6px"></div>
+{% endif %}
+{% endif %}
+
+{% if content.get('has_code') %}
+  <!-- Section 3: Code Walkthrough -->
+  <h3 class="section-title">代码讲解</h3>
+  <div class="row">
+    <div class="col" style="flex:1.3;min-width:360px"><div id="code-box" class="code-box"></div></div>
+    <div class="col" style="flex:1;min-width:280px">
+      <div class="knowledge-panel">
+        <h4 id="knowledge-topic" style="margin:0 0 6px">点击代码行查看</h4>
+        <p id="knowledge-text" class="muted" style="margin:0 0 6px">点击左侧代码行查看对应知识点解释。每行末尾的 ? 可标记不理解。</p>
+        <div id="knowledge-feedback" style="font-size:12px;min-height:20px;margin-bottom:4px"></div>
+        <div style="display:flex;gap:8px"><button class="btn secondary" id="knowledge-ask-btn">追问该行知识点</button></div>
+      </div>
+    </div>
+  </div>
+{% endif %}
+
+  <!-- Section 4: Q&A Chat (always present) -->
+  <h3 class="section-title">学习问答</h3>
+  <div class="chat-area">
+    <div id="chat-messages" class="chat-msgs"><div class="muted">你好，我是 {{ node.name }} 学习助手，有什么可以帮你的？</div></div>
+    <div class="chat-chips" id="chat-chips"></div>
+    <div class="chat-input-row">
+      <input id="chat-input" style="flex:1" placeholder="输入关于{{ node.name }}的问题"/>
+      <button class="btn" id="chat-send-btn">发送</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====== QUIZ ====== -->
+<div id="m-quiz" class="card" style="display:none">
+  <h3 class="section-title">定向测验 — {{ node.name }}</h3>
+  <div class="viz-row">
+    <select id="quiz-difficulty-filter" style="width:auto;padding:6px"><option value="">全部难度</option><option value="easy">简单</option><option value="medium">中等</option><option value="hard">困难</option></select>
+    <button class="btn" id="generate-quiz-btn">生成题目</button><button class="btn secondary" id="next-quiz-btn">下一题</button>
+  </div>
+  <div id="quiz-question" style="font-weight:bold;margin-bottom:8px">点击"生成题目"开始。</div>
+  <div id="quiz-options" style="display:flex;flex-direction:column;gap:8px"></div>
+  <div id="quiz-feedback" style="margin-top:10px;font-weight:bold"></div>
+</div>
+
+<!-- ====== REPORT ====== -->
+<div id="m-report" class="card" style="display:none">
+  <h3 class="section-title">学习报告</h3>
+  <div class="viz-row">
+    <button class="btn" id="analyze-btn">生成报告</button>
+    <button class="btn secondary" id="save-profile-btn">保存进度</button>
+  </div>
+  <div id="skill-box" class="card" style="margin-bottom:8px">尚未生成掌握度。</div>
+  <div id="rec-box" class="card">尚未生成推荐。</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ===== MODULE SWITCHING (simplified: 3 tabs) =====
+document.querySelectorAll('.module-btn').forEach(btn => btn.addEventListener('click', () => {
+  document.querySelectorAll('.module-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('m-learn').style.display = btn.dataset.module === 'm-learn' ? 'block' : 'none';
+  document.getElementById('m-quiz').style.display = btn.dataset.module === 'm-quiz' ? 'block' : 'none';
+  document.getElementById('m-report').style.display = btn.dataset.module === 'm-report' ? 'block' : 'none';
+}));
+
+// ===== DATA FROM BACKEND =====
+const CONTENT = {{ content | tojson | safe }};
+const NODE = {{ node | tojson | safe }};
+
+// ===== CHAT CHIPS =====
+(function(){
+  const chips = document.getElementById('chat-chips');
+  const qs = CONTENT.suggested_questions || [NODE.name + '的核心要点是什么', '请介绍一下' + NODE.name, '学习' + NODE.name + '需要注意什么'];
+  qs.forEach(q => { const b = document.createElement('button'); b.className='btn secondary ask-chip'; b.textContent=q; b.onclick=()=>sendChat(q); chips.appendChild(b); });
+})();
+
+// ===== SHARED STATE =====
+let profileState = { total_steps_viewed:0, marked_lines:[], completed_runs:0 };
+let animSteps=[], curStep=0, autoTimer=null, vizData={};
+
+function clone(x){ return JSON.parse(JSON.stringify(x)); }
+function el(id){ return document.getElementById(id); }
+
+async function syncProfile(){
+  await fetch('/api/profile', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(profileState)});
+}
+
+async function sendChat(prefill){
+  const input=el('chat-input'); const q=(prefill||input.value||'').trim(); if(!q) return;
+  const box=el('chat-messages'); const qd=document.createElement('div');
+  qd.style.cssText='margin:6px 0;text-align:right'; qd.innerHTML=`<span style="background:#2563eb;color:#fff;border-radius:8px;padding:6px 10px;display:inline-block">${q}</span>`;
+  box.appendChild(qd); input.value='';
+  const res=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q+'（当前学习：'+NODE.name+'）'})});
+  const data=await res.json(); const a=document.createElement('div');
+  a.style.cssText='margin:6px 0'; a.innerHTML=`<span style="background:#e2e8f0;color:#111827;border-radius:8px;padding:6px 10px;display:inline-block">${data.answer||'无响应'} <span class="muted">(${data.provider||'?'})</span></span>`;
+  box.appendChild(a); box.scrollTop=box.scrollHeight;
+}
+
+// ===== QUIZ =====
+let quizQuestions=[], quizIdx=-1, quizCorrect=0, quizTotal=0;
+const quizConcepts = {{ content.get('quiz_concepts', []) | tojson | safe }};
+
+async function loadQuiz(diff){
+  let url='/api/quiz'; const p=[]; if(diff) p.push('difficulty='+encodeURIComponent(diff));
+  if(quizConcepts.length>0) p.push('concept='+encodeURIComponent(quizConcepts[0]));
+  if(p.length) url+='?'+p.join('&');
+  const res=await fetch(url); const data=await res.json();
+  if(data.success&&data.questions.length){ quizQuestions=data.questions; quizIdx=0; quizCorrect=0; quizTotal=0; renderQuiz(); }
+  else el('quiz-question').textContent='暂无匹配题目';
+}
+function renderQuiz(){
+  const q=quizQuestions[quizIdx], qDiv=el('quiz-question'), box=el('quiz-options');
+  box.innerHTML=''; el('quiz-feedback').textContent='';
+  if(!q){ qDiv.textContent='暂无题目'; return; }
+  qDiv.innerHTML=`<b>${quizIdx+1}/${quizQuestions.length}</b> <span class="badge ${q.difficulty||'medium'}">${q.difficulty||'medium'}</span> ${q.stem}`;
+  q.options.forEach((opt,idx)=>{
+    const btn=document.createElement('button'); btn.className='btn secondary'; btn.style.cssText='text-align:left;white-space:normal';
+    btn.textContent=`${String.fromCharCode(65+idx)}. ${opt}`;
+    btn.onclick=()=>{ quizTotal++; const ok=idx===q.correctIndex; if(ok) quizCorrect++;
+      el('quiz-feedback').innerHTML=ok?`<span style="color:#166534">正确</span>：${q.explanations[idx]}`:`<span style="color:#991b1b">错误</span>：${q.explanations[idx]}`;
+      box.querySelectorAll('button').forEach(b=>b.disabled=true); };
+    box.appendChild(btn);
+  });
+}
+async function generateReport(){
+  await syncProfile();
+  const res=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({total_animation_steps:Math.max(animSteps.length,1)})});
+  const data=await res.json();
+  if(data.success){ const items=Object.entries(data.skill_scores||{});
+    el('skill-box').innerHTML=`<h4>掌握度</h4>${items.map(([k,v])=>`${k}: <b>${v}%</b>`).join('<br/>')}<br/>测验正确：<b>${quizCorrect}</b>`; }
+  else el('skill-box').textContent=data.error||'分析失败';
+  el('rec-box').innerHTML=`<h4>推荐建议</h4><ul>${(data.recommendations||[]).map(r=>`<li>${r.knowledge}（${r.score}%）- ${r.advice||''} ${r.next_topic?'→ '+r.next_topic:''}</li>`).join('')||'<li>暂无</li>'}</ul>`;
+}
+
+// ===== CODE WALKTHROUGH =====
+{% if content.get('has_code') %}
+const CODE_LINES = {{ content.code_lines | tojson | safe }};
+const CODE_KM = {{ content.code_knowledge_map | tojson | safe }};
+const conceptExpls = {};
+for(const [topic,lines] of Object.entries(CODE_KM)){
+  conceptExpls[topic] = topic + (lines.length>0?'（代码行：'+lines.join(',')+'）':'（理解整体概念）');
+}
+function renderCodeBox(){
+  const box=el('code-box'); if(!box) return; box.innerHTML='';
+  CODE_LINES.forEach((text,idx)=>{
+    const line=idx+1; let lc='';
+    for(const [t,ls] of Object.entries(CODE_KM)){ if(ls.includes(line)){ lc=t; break; } }
+    const row=document.createElement('div'); row.className='line';
+    row.innerHTML=`<span class="line-num">${line}</span>${text||'&nbsp;'}<button data-line="${line}" class="mark-btn">?</button>`;
+    row.onclick=()=>{ el('knowledge-topic').textContent=lc||'未归类'; el('knowledge-text').textContent=conceptExpls[lc]||'点击代码行查看解释'; };
+    box.appendChild(row);
+  });
+  box.querySelectorAll('.mark-btn').forEach(btn=>{ btn.addEventListener('click',async(e)=>{ e.stopPropagation();
+    const ln=Number(btn.dataset.line); const fb=el('knowledge-feedback');
+    if(!profileState.marked_lines.includes(ln)){ profileState.marked_lines.push(ln);
+      await fetch('/api/mark',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({line:ln,knowledge:NODE.name,note:''})}); await syncProfile();
+      fb.innerHTML='<span style="color:#16a34a">已标记第'+ln+'行，可在学习报告中查看。</span>'; }
+    else { fb.innerHTML='<span style="color:#ca8a04">第'+ln+'行已标记过。</span>'; }
+    setTimeout(()=>{fb.innerHTML='';},3000); }); });
+}
+{% endif %}
+
+// ===== VISUALIZATION ENGINES =====
+{% if content.get('has_visualization') %}
+
+function nextStep(){ if(curStep<animSteps.length-1){ curStep++; renderViz(); } }
+function startAuto(){ if(autoTimer) return; autoTimer=setInterval(()=>{ if(curStep>=animSteps.length-1){ clearInterval(autoTimer); autoTimer=null; return; } nextStep(); },600); }
+function pauseAuto(){ if(autoTimer){ clearInterval(autoTimer); autoTimer=null; } }
+
+{% if content.get('viz_type') == 'kruskal' %}
+const PRESETS={basic:{nodes:['A','B','C','D','E','F'],edges:[[0,1,4],[0,2,2],[1,2,1],[1,3,5],[2,3,8],[2,4,10],[3,4,2],[3,5,6],[4,5,3]]},equal:{nodes:['A','B','C','D','E'],edges:[[0,1,2],[0,2,2],[1,2,3],[1,3,4],[2,3,4],[2,4,5],[3,4,5]]},disconnected:{nodes:['A','B','C','D','E','F'],edges:[[0,1,2],[1,2,3],[0,2,4],[3,4,1],[4,5,2]]}};
+
+function buildSteps(){
+  animSteps=[]; const n=vizData.nodes.length;
+  const parent=Array(n).fill(0).map((_,i)=>i), rnk=Array(n).fill(0);
+  function find(x){ while(parent[x]!==x){ parent[x]=parent[parent[x]]; x=parent[x]; } return x; }
+  function unite(x,y){ x=find(x); y=find(y); if(x===y) return; if(rnk[x]<rnk[y]) parent[x]=y; else if(rnk[x]>rnk[y]) parent[y]=x; else{ parent[y]=x; rnk[x]++; } }
+  const sorted=vizData.edges.map((e,i)=>({...e,id:'e'+(i+1)})).sort((a,b)=>a.w-b.w);
+  let mst=[],rej=[],total=0,proc=0;
+  animSteps.push({type:'init',op:'初始化：每个顶点自成一集合',mst:[],rej:[],parent:clone(parent),rnk:clone(rnk),total,proc,edge:null});
+  sorted.forEach(edge=>{ proc++;
+    animSteps.push({type:'consider',op:`考察边 ${vizData.nodes[edge.u]}-${vizData.nodes[edge.v]}(w=${edge.w})`,mst:clone(mst),rej:clone(rej),parent:clone(parent),rnk:clone(rnk),total,proc,edge});
+    if(find(edge.u)!==find(edge.v)){ unite(edge.u,edge.v); mst.push(edge.id); total+=edge.w;
+      animSteps.push({type:'accept',op:'接受并合并集合',mst:clone(mst),rej:clone(rej),parent:clone(parent),rnk:clone(rnk),total,proc,edge}); }
+    else { rej.push(edge.id);
+      animSteps.push({type:'reject',op:`拒绝（find同→同集合）`,mst:clone(mst),rej:clone(rej),parent:clone(parent),rnk:clone(rnk),total,proc,edge}); }
+  });
+  animSteps.push({type:'done',op:'MST完成',mst:clone(mst),rej:clone(rej),parent:clone(parent),rnk:clone(rnk),total,proc,edge:null});
+}
+
+function renderViz(){
+  const s=animSteps[curStep]; if(!s) return;
+  const svg=el('v-canvas'); svg.innerHTML=''; const nodes=vizData.nodes;
+  const pos={}; const cx=390,cy=170,r=130;
+  nodes.forEach((n,i)=>{ const a=-Math.PI/2+i*2*Math.PI/nodes.length; pos[i]={x:cx+r*Math.cos(a),y:cy+r*Math.sin(a)}; });
+  const mstSet=new Set(s.mst||[]), rejSet=new Set(s.rej||[]);
+  vizData.edges.forEach((e,i)=>{ const u=pos[e.u],v=pos[e.v]; const eid='e'+(i+1);
+    const ln=document.createElementNS('http://www.w3.org/2000/svg','line'); ln.setAttribute('x1',u.x); ln.setAttribute('y1',u.y); ln.setAttribute('x2',v.x); ln.setAttribute('y2',v.y);
+    ln.setAttribute('stroke',mstSet.has(eid)?'#16a34a':rejSet.has(eid)?'#dc2626':'#94a3b8'); ln.setAttribute('stroke-width',s.edge&&s.edge.id===eid?'3.5':'2');
+    if(rejSet.has(eid)) ln.setAttribute('stroke-dasharray','6 4'); svg.appendChild(ln);
+    const tx=document.createElementNS('http://www.w3.org/2000/svg','text'); tx.setAttribute('x',(u.x+v.x)/2); tx.setAttribute('y',(u.y+v.y)/2-6); tx.setAttribute('font-size','12'); tx.setAttribute('text-anchor','middle'); tx.textContent=e.w; svg.appendChild(tx);
+  });
+  nodes.forEach((n,i)=>{ const p=pos[i];
+    const c=document.createElementNS('http://www.w3.org/2000/svg','circle'); c.setAttribute('cx',p.x); c.setAttribute('cy',p.y); c.setAttribute('r','18'); c.setAttribute('fill','#fff'); c.setAttribute('stroke','#334155'); c.setAttribute('stroke-width','2'); svg.appendChild(c);
+    const t=document.createElementNS('http://www.w3.org/2000/svg','text'); t.setAttribute('x',p.x); t.setAttribute('y',p.y+4); t.setAttribute('text-anchor','middle'); t.setAttribute('font-size','12'); t.textContent=n; svg.appendChild(t);
+  });
+  el('v-status').textContent=s.op; el('v-accepted').textContent=(s.mst||[]).length; el('v-weight').textContent=s.total||0; el('v-processed').textContent=s.proc||0;
+  el('v-edgelist').innerHTML=vizData.edges.map((e,i)=>`<li>${nodes[e.u]}-${nodes[e.v]}(w=${e.w})</li>`).join('');
+  el('v-ufstate').innerHTML=nodes.map((n,i)=>`${n}:${s.parent[i]}`).join(' | ');
+  if(curStep>0){ profileState.total_steps_viewed++; if(s.type==='done') profileState.completed_runs++; }
+}
+function loadViz(p){ vizData=PRESETS[p]; buildSteps(); curStep=0; renderViz(); }
+
+{% elif content.get('viz_type') == 'sorting' %}
+const PRESETS={random8:[42,17,63,8,55,31,74,26],random12:[38,15,72,6,51,29,83,11,67,44,92,3],nearly:[3,8,11,15,22,29,31,38,44,51,55,63],reversed:[63,55,51,44,38,31,29,22,15,11,8,3]};
+let compares=0,swaps=0;
+
+function buildSteps(){
+  animSteps=[]; compares=0; swaps=0; const arr=clone(vizData.arr);
+  animSteps.push({type:'init',op:'初始数组',arr:clone(arr),pivot:-1,left:-1,right:-1,i:-1,j:-1});
+  {% if node.code == 'quick-sort' %}
+  function partition(low,high){
+    const pivot=arr[high]; animSteps.push({type:'pivot',op:`基准 arr[${high}]=${pivot}`,arr:clone(arr),pivot:high,left:low,right:high,i:-1,j:-1});
+    let i=low-1;
+    for(let j=low;j<high;j++){ compares++;
+      if(arr[j]<=pivot){ i++; [arr[i],arr[j]]=[arr[j],arr[i]]; swaps++; animSteps.push({type:'swap',op:`交换 arr[${i}]↔arr[${j}]`,arr:clone(arr),pivot:high,left:low,right:high,i,j}); }
+      else animSteps.push({type:'compare',op:`跳过 arr[${j}]`,arr:clone(arr),pivot:high,left:low,right:high,i,j});
+    }
+    [arr[i+1],arr[high]]=[arr[high],arr[i+1]]; swaps++;
+    animSteps.push({type:'place',op:`基准归位到 ${i+1}`,arr:clone(arr),pivot:i+1,left:low,right:high,i:i+1,j:-1});
+    return i+1;
+  }
+  function qs(low,high){ if(low<high){ const pi=partition(low,high); qs(low,pi-1); qs(pi+1,high); } }
+  qs(0,arr.length-1);
+  {% else %}
+  function merge(l,m,r){ const L=arr.slice(l,m+1),R=arr.slice(m+1,r+1); let i=0,j=0,k=l;
+    while(i<L.length&&j<R.length){ compares++; if(L[i]<=R[j]){ arr[k]=L[i]; i++; animSteps.push({type:'merge',op:`选左 L[${i-1}]`,arr:clone(arr),pivot:l,left:m,right:r,i:k,j:-1}); } else{ arr[k]=R[j]; j++; animSteps.push({type:'merge',op:`选右 R[${j-1}]`,arr:clone(arr),pivot:l,left:m,right:r,i:k,j:-1}); } k++; }
+    while(i<L.length){ arr[k]=L[i]; i++; k++; animSteps.push({type:'merge',op:'剩余左半',arr:clone(arr),pivot:l,left:m,right:r,i:k-1,j:-1}); }
+    while(j<R.length){ arr[k]=R[j]; j++; k++; animSteps.push({type:'merge',op:'剩余右半',arr:clone(arr),pivot:l,left:m,right:r,i:k-1,j:-1}); }
+  }
+  function ms(l,r){ if(l<r){ const m=Math.floor((l+r)/2); animSteps.push({type:'split',op:`分割[${l},${r}]`,arr:clone(arr),pivot:m,left:l,right:r,i:-1,j:-1}); ms(l,m); ms(m+1,r); merge(l,m,r); animSteps.push({type:'merged',op:`合并完成[${l},${r}]`,arr:clone(arr),pivot:-1,left:l,right:r,i:-1,j:-1}); } }
+  ms(0,arr.length-1);
+  {% endif %}
+  animSteps.push({type:'done',op:'排序完成',arr:clone(arr),pivot:-1,left:-1,right:-1,i:-1,j:-1});
+}
+
+function renderViz(){
+  const s=animSteps[curStep]; if(!s) return; const svg=el('v-canvas'); svg.innerHTML=''; const arr=s.arr;
+  const barW=Math.min(50,680/arr.length),gap=4,baseY=300,maxV=Math.max(...arr,1);
+  arr.forEach((v,i)=>{ const h=(v/maxV)*260,x=40+i*(barW+gap),y=baseY-h; let fill='#3b82f6';
+    if(i===s.pivot) fill='#ef4444'; else if(i===s.i) fill='#f59e0b'; else if(s.left>=0&&s.right>=0&&(i<s.left||i>s.right)) fill='#94a3b8';
+    const r=document.createElementNS('http://www.w3.org/2000/svg','rect'); r.setAttribute('x',x); r.setAttribute('y',y); r.setAttribute('width',barW); r.setAttribute('height',h); r.setAttribute('rx','4'); r.setAttribute('fill',fill); svg.appendChild(r);
+    const t=document.createElementNS('http://www.w3.org/2000/svg','text'); t.setAttribute('x',x+barW/2); t.setAttribute('y',y-5); t.setAttribute('text-anchor','middle'); t.setAttribute('font-size','11'); t.textContent=v; svg.appendChild(t);
+  });
+  el('v-status').textContent=s.op; el('v-compares').textContent=compares; el('v-swaps').textContent=swaps;
+}
+function loadViz(p){ vizData={arr:PRESETS[p]}; buildSteps(); curStep=0; renderViz(); }
+
+{% elif content.get('viz_type') == 'graph-search' %}
+const PRESETS={tree:{nodes:['1','2','3','4','5','6','7'],edges:[[0,1],[0,2],[1,3],[1,4],[2,5],[2,6]]},grid:{nodes:['1','2','3','4','5','6'],edges:[[0,1],[0,2],[1,3],[2,3],[2,4],[3,5],[4,5]]},random:{nodes:['1','2','3','4','5','6','7'],edges:[[0,1],[0,2],[1,3],[1,4],[2,4],[2,5],[3,6],[5,6]]}};
+const isBFS = NODE.code === 'bfs-traversal';
+
+function buildSteps(){
+  animSteps=[]; const n=vizData.nodes.length; const adj=Array(n).fill(0).map(()=>[]);
+  vizData.edges.forEach(([u,v])=>{ adj[u].push(v); adj[v].push(u); });
+  const visited=Array(n).fill(false); const order=[]; const start=vizData.start||0;
+  animSteps.push({type:'init',op:`起点:${vizData.nodes[start]}`,visited:clone(visited),order:[],current:-1,queue:isBFS?[start]:[start]});
+  if(isBFS){
+    const q=[start]; visited[start]=true;
+    while(q.length>0){ const u=q.shift(); order.push(u); animSteps.push({type:'visit',op:`访问${vizData.nodes[u]}`,visited:clone(visited),order:clone(order),current:u,queue:clone(q)});
+      adj[u].forEach(v=>{ if(!visited[v]){ visited[v]=true; q.push(v); } });
+    }
+  } else {
+    function dfs(u){ visited[u]=true; order.push(u); animSteps.push({type:'visit',op:`访问${vizData.nodes[u]}`,visited:clone(visited),order:clone(order),current:u,queue:[]});
+      adj[u].forEach(v=>{ if(!visited[v]){ dfs(v); } });
+    }
+    dfs(start);
+  }
+  animSteps.push({type:'done',op:'遍历完成',visited:clone(visited),order:clone(order),current:-1,queue:[]});
+}
+
+function renderViz(){
+  const s=animSteps[curStep]; if(!s) return; const svg=el('v-canvas'); svg.innerHTML=''; const nodes=vizData.nodes;
+  const pos={}; const cx=390,cy=170,r=130;
+  nodes.forEach((n,i)=>{ const a=-Math.PI/2+i*2*Math.PI/nodes.length; pos[i]={x:cx+r*Math.cos(a),y:cy+r*Math.sin(a)}; });
+  vizData.edges.forEach(([u,v])=>{
+    const ln=document.createElementNS('http://www.w3.org/2000/svg','line'); ln.setAttribute('x1',pos[u].x); ln.setAttribute('y1',pos[u].y); ln.setAttribute('x2',pos[v].x); ln.setAttribute('y2',pos[v].y); ln.setAttribute('stroke','#94a3b8'); ln.setAttribute('stroke-width','2'); svg.appendChild(ln);
+  });
+  nodes.forEach((n,i)=>{ const p=pos[i]; let fill='#fff'; if(i===s.current) fill='#fbbf24'; else if(s.visited[i]) fill='#bbf7d0'; else if(s.queue&&s.queue.includes(i)) fill='#bfdbfe';
+    const c=document.createElementNS('http://www.w3.org/2000/svg','circle'); c.setAttribute('cx',p.x); c.setAttribute('cy',p.y); c.setAttribute('r','20'); c.setAttribute('fill',fill); c.setAttribute('stroke','#334155'); c.setAttribute('stroke-width','2'); svg.appendChild(c);
+    const t=document.createElementNS('http://www.w3.org/2000/svg','text'); t.setAttribute('x',p.x); t.setAttribute('y',p.y+5); t.setAttribute('text-anchor','middle'); t.setAttribute('font-size','14'); t.setAttribute('font-weight','bold'); t.textContent=n; svg.appendChild(t);
+  });
+  el('v-status').textContent=s.op; el('v-order').textContent=(s.order||[]).map(i=>vizData.nodes[i]).join(' → ');
+}
+function loadViz(p){ vizData={nodes:PRESETS[p].nodes,edges:PRESETS[p].edges,start:0};
+  const sel=el('start-node'); sel.innerHTML=''; vizData.nodes.forEach((n,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent=n; sel.appendChild(o); }); sel.onchange=()=>{vizData.start=parseInt(sel.value);};
+  buildSteps(); curStep=0; renderViz(); }
+
+{% elif content.get('viz_type') == 'dijkstra' %}
+const PRESETS={basic:{nodes:['A','B','C','D','E'],edges:[[0,1,4],[0,2,2],[1,2,1],[1,3,5],[2,3,8],[2,4,10],[3,4,2]]},complex:{nodes:['A','B','C','D','E','F'],edges:[[0,1,4],[0,2,2],[1,2,1],[1,3,5],[2,3,8],[2,4,10],[3,4,2],[3,5,6],[4,5,3]]}};
+
+function buildSteps(){
+  animSteps=[]; const n=vizData.nodes.length,start=vizData.start||0; const dist=Array(n).fill(Infinity); dist[start]=0; const done=Array(n).fill(false);
+  animSteps.push({type:'init',op:`起点:${vizData.nodes[start]},dist=0`,dist:clone(dist),done:clone(done),current:-1});
+  for(let cnt=0;cnt<n;cnt++){ let u=-1,minD=Infinity; for(let i=0;i<n;i++){ if(!done[i]&&dist[i]<minD){ minD=dist[i]; u=i; } } if(u===-1) break; done[u]=true;
+    animSteps.push({type:'select',op:`选最近节点${vizData.nodes[u]}(dist=${dist[u]})`,dist:clone(dist),done:clone(done),current:u});
+    vizData.edges.forEach(([a,b,w])=>{ let v=-1; if(a===u) v=b; else if(b===u) v=a; if(v!==-1&&!done[v]&&dist[u]+w<dist[v]){ dist[v]=dist[u]+w; } });
+  }
+  animSteps.push({type:'done',op:'所有可达节点已确定最短距离',dist:clone(dist),done:clone(done),current:-1});
+}
+
+function renderViz(){
+  const s=animSteps[curStep]; if(!s) return; const svg=el('v-canvas'); svg.innerHTML=''; const nodes=vizData.nodes;
+  const pos={}; const cx=390,cy=170,r=130;
+  nodes.forEach((n,i)=>{ const a=-Math.PI/2+i*2*Math.PI/nodes.length; pos[i]={x:cx+r*Math.cos(a),y:cy+r*Math.sin(a)}; });
+  vizData.edges.forEach(([u,v,w])=>{ const ln=document.createElementNS('http://www.w3.org/2000/svg','line'); ln.setAttribute('x1',pos[u].x); ln.setAttribute('y1',pos[u].y); ln.setAttribute('x2',pos[v].x); ln.setAttribute('y2',pos[v].y); ln.setAttribute('stroke','#94a3b8'); ln.setAttribute('stroke-width','1.5'); svg.appendChild(ln);
+    const tx=document.createElementNS('http://www.w3.org/2000/svg','text'); tx.setAttribute('x',(pos[u].x+pos[v].x)/2); tx.setAttribute('y',(pos[u].y+pos[v].y)/2-6); tx.setAttribute('font-size','11'); tx.setAttribute('text-anchor','middle'); tx.setAttribute('fill','#64748b'); tx.textContent=w; svg.appendChild(tx);
+  });
+  nodes.forEach((n,i)=>{ const p=pos[i]; let fill='#fff'; if(i===s.current) fill='#fbbf24'; else if(s.done[i]) fill='#bbf7d0';
+    const c=document.createElementNS('http://www.w3.org/2000/svg','circle'); c.setAttribute('cx',p.x); c.setAttribute('cy',p.y); c.setAttribute('r','22'); c.setAttribute('fill',fill); c.setAttribute('stroke','#334155'); c.setAttribute('stroke-width','2'); svg.appendChild(c);
+    const t=document.createElementNS('http://www.w3.org/2000/svg','text'); t.setAttribute('x',p.x); t.setAttribute('y',p.y-8); t.setAttribute('text-anchor','middle'); t.setAttribute('font-size','11'); t.setAttribute('fill','#1e40af'); t.textContent=n; svg.appendChild(t);
+    const dt=document.createElementNS('http://www.w3.org/2000/svg','text'); dt.setAttribute('x',p.x); dt.setAttribute('y',p.y+16); dt.setAttribute('text-anchor','middle'); dt.setAttribute('font-size','9'); dt.setAttribute('fill','#dc2626'); dt.textContent=s.dist[i]===Infinity?'∞':s.dist[i]; svg.appendChild(dt);
+  });
+  el('v-status').textContent=s.op; el('v-disttable').innerHTML=nodes.map((n,i)=>`${n}:<b>${s.dist[i]===Infinity?'∞':s.dist[i]}</b>`).join(' | ');
+  el('v-donelist').textContent=nodes.filter((_,i)=>s.done[i]).join(', ')||'(空)';
+}
+function loadViz(p){ vizData={nodes:PRESETS[p].nodes,edges:PRESETS[p].edges,start:0};
+  const sel=el('start-node'); sel.innerHTML=''; vizData.nodes.forEach((n,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent=n; sel.appendChild(o); }); sel.onchange=()=>{vizData.start=parseInt(sel.value);};
+  buildSteps(); curStep=0; renderViz(); }
+
+{% elif content.get('viz_type') == 'prim' %}
+const PRESETS={basic:{nodes:['A','B','C','D','E'],edges:[[0,1,4],[0,2,2],[1,2,1],[1,3,5],[2,3,8],[2,4,10],[3,4,2]]},complex:{nodes:['A','B','C','D','E','F'],edges:[[0,1,4],[0,2,2],[1,2,1],[1,3,5],[2,3,8],[2,4,10],[3,4,2],[3,5,6],[4,5,3]]}};
+
+function buildSteps(){
+  animSteps=[]; const n=vizData.nodes.length,start=vizData.start||0; const key=Array(n).fill(Infinity); key[start]=0; const inMST=Array(n).fill(false); const parent=Array(n).fill(-1); let mstW=0;
+  animSteps.push({type:'init',op:`起点:${vizData.nodes[start]}`,key:clone(key),inMST:clone(inMST),parent:clone(parent),mstW,current:-1});
+  for(let cnt=0;cnt<n;cnt++){ let u=-1,minK=Infinity; for(let i=0;i<n;i++){ if(!inMST[i]&&key[i]<minK){ minK=key[i]; u=i; } } if(u===-1) break; inMST[u]=true; if(parent[u]!==-1) mstW+=key[u];
+    animSteps.push({type:'add',op:`加入${vizData.nodes[u]}到MST(key=${key[u]===Infinity?'∞':key[u]})`,key:clone(key),inMST:clone(inMST),parent:clone(parent),mstW,current:u});
+    vizData.edges.forEach(([a,b,w])=>{ let v=-1; if(a===u) v=b; else if(b===u) v=a; if(v!==-1&&!inMST[v]&&w<key[v]){ key[v]=w; parent[v]=u; } });
+  }
+  animSteps.push({type:'done',op:`MST完成,总权=${mstW}`,key:clone(key),inMST:clone(inMST),parent:clone(parent),mstW,current:-1});
+}
+
+function renderViz(){
+  const s=animSteps[curStep]; if(!s) return; const svg=el('v-canvas'); svg.innerHTML=''; const nodes=vizData.nodes;
+  const pos={}; const cx=390,cy=170,r=130;
+  nodes.forEach((n,i)=>{ const a=-Math.PI/2+i*2*Math.PI/nodes.length; pos[i]={x:cx+r*Math.cos(a),y:cy+r*Math.sin(a)}; });
+  vizData.edges.forEach(([u,v,w])=>{
+    const inMSTEdge=s.inMST&&s.inMST[u]&&s.inMST[v]&&s.parent&&(s.parent[u]===v||s.parent[v]===u);
+    const ln=document.createElementNS('http://www.w3.org/2000/svg','line'); ln.setAttribute('x1',pos[u].x); ln.setAttribute('y1',pos[u].y); ln.setAttribute('x2',pos[v].x); ln.setAttribute('y2',pos[v].y); ln.setAttribute('stroke',inMSTEdge?'#16a34a':'#94a3b8'); ln.setAttribute('stroke-width',inMSTEdge?'3':'1.5'); svg.appendChild(ln);
+  });
+  nodes.forEach((n,i)=>{ const p=pos[i];
+    const c=document.createElementNS('http://www.w3.org/2000/svg','circle'); c.setAttribute('cx',p.x); c.setAttribute('cy',p.y); c.setAttribute('r','20'); c.setAttribute('fill',s.inMST[i]?'#bbf7d0':i===s.current?'#fbbf24':'#fff'); c.setAttribute('stroke','#334155'); c.setAttribute('stroke-width','2'); svg.appendChild(c);
+    const t=document.createElementNS('http://www.w3.org/2000/svg','text'); t.setAttribute('x',p.x); t.setAttribute('y',p.y+5); t.setAttribute('text-anchor','middle'); t.setAttribute('font-size','12'); t.setAttribute('font-weight','bold'); t.textContent=n; svg.appendChild(t);
+  });
+  el('v-status').textContent=s.op; el('v-mstweight').textContent=s.mstW||0;
+}
+function loadViz(p){ vizData={nodes:PRESETS[p].nodes,edges:PRESETS[p].edges,start:0};
+  const sel=el('start-node'); sel.innerHTML=''; vizData.nodes.forEach((n,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent=n; sel.appendChild(o); }); sel.onchange=()=>{vizData.start=parseInt(sel.value);};
+  buildSteps(); curStep=0; renderViz(); }
+
+{% elif content.get('viz_type') == 'tree' %}
+function buildSteps(){
+  animSteps=[]; const vals=vizData.values; const treeNodes=[],edges=[]; let nextId=0;
+  function addNode(val,parentId){ const id=nextId++; treeNodes.push({id,val,x:0,y:0}); if(parentId!==null) edges.push({from:parentId,to:id}); return id; }
+  let rootId=null;
+  vals.forEach(v=>{
+    if(rootId===null){ rootId=addNode(v,null); animSteps.push({type:'insert',op:`插入根节点${v}`,treeNodes:clone(treeNodes),edges:clone(edges),highlight:rootId}); }
+    else { let cur=rootId;
+      while(true){
+        const curNode=treeNodes.find(tn=>tn.id===cur); if(v<curNode.val){
+          const hasLeft=edges.some(e=>e.from===cur&&treeNodes.find(tn=>tn.id===e.to)?.val<curNode.val);
+          if(!hasLeft){ const nid=addNode(v,cur); animSteps.push({type:'insert',op:`插入${v}为${curNode.val}的左子`,treeNodes:clone(treeNodes),edges:clone(edges),highlight:nid}); break; }
+          else { cur=edges.find(e=>e.from===cur&&treeNodes.find(tn=>tn.id===e.to)?.val<curNode.val).to; }
+        } else {
+          const hasRight=edges.some(e=>e.from===cur&&treeNodes.find(tn=>tn.id===e.to)?.val>curNode.val);
+          if(!hasRight){ const nid=addNode(v,cur); animSteps.push({type:'insert',op:`插入${v}为${curNode.val}的右子`,treeNodes:clone(treeNodes),edges:clone(edges),highlight:nid}); break; }
+          else { cur=edges.find(e=>e.from===cur&&treeNodes.find(tn=>tn.id===e.to)?.val>curNode.val).to; }
+        }
+      }
+    }
+  });
+}
+
+function layoutTree(tn,ed){ const pos={},adj={},depths={}; tn.forEach(n=>{adj[n.id]=[];}); ed.forEach(e=>{adj[e.from].push(e.to);});
+  const root=tn.find(n=>n.parent===undefined); if(!root&&tn.length===0) return pos; const r=root||tn[0];
+  const q=[{id:r.id,depth:0}]; while(q.length>0){ const{id,depth}=q.shift(); if(!depths[depth]) depths[depth]=[]; depths[depth].push(id); adj[id].forEach(cid=>q.push({id:cid,depth:depth+1})); }
+  const maxD=Math.max(...Object.keys(depths).map(Number),0); const xStep=700/(maxD+1);
+  Object.entries(depths).forEach(([depth,ids])=>{ ids.forEach((id,i)=>{ pos[id]={x:60+parseInt(depth)*xStep,y:50+i*60}; }); });
+  return pos;
+}
+
+function renderViz(){
+  const s=animSteps[curStep]; if(!s) return; const svg=el('v-canvas'); svg.innerHTML='';
+  const tn=s.treeNodes||[], ed=s.edges||[]; const pos=layoutTree(tn,ed);
+  ed.forEach(e=>{ const f=pos[e.from],t=pos[e.to]; if(!f||!t) return;
+    const ln=document.createElementNS('http://www.w3.org/2000/svg','line'); ln.setAttribute('x1',f.x); ln.setAttribute('y1',f.y); ln.setAttribute('x2',t.x); ln.setAttribute('y2',t.y); ln.setAttribute('stroke','#94a3b8'); ln.setAttribute('stroke-width','2'); svg.appendChild(ln);
+  });
+  tn.forEach(n=>{ const p=pos[n.id]; if(!p) return; const hl=s.highlight===n.id;
+    const c=document.createElementNS('http://www.w3.org/2000/svg','circle'); c.setAttribute('cx',p.x); c.setAttribute('cy',p.y); c.setAttribute('r','18'); c.setAttribute('fill',hl?'#fbbf24':'#dbeafe'); c.setAttribute('stroke',hl?'#2563eb':'#475569'); c.setAttribute('stroke-width',hl?'3':'1.5'); svg.appendChild(c);
+    const t=document.createElementNS('http://www.w3.org/2000/svg','text'); t.setAttribute('x',p.x); t.setAttribute('y',p.y+4); t.setAttribute('text-anchor','middle'); t.setAttribute('font-size','11'); t.setAttribute('font-weight','bold'); t.textContent=n.val; svg.appendChild(t);
+  });
+  el('v-status').textContent=s.op;
+}
+function loadViz(p){
+  const valStr=el('tree-input').value||'50,30,70,20,40,60,80'; vizData={values:valStr.split(',').map(s=>parseInt(s.trim())).filter(n=>!isNaN(n))};
+  buildSteps(); curStep=0; renderViz();
+}
+
+{% elif content.get('viz_type') == 'dp-table' %}
+const PRESETS={basic:{W:5,wt:[2,3,4],val:[3,4,5],n:3},larger:{W:8,wt:[2,3,4,5],val:[3,4,5,6],n:4}};
+
+function buildSteps(){
+  animSteps=[]; const{W,wt,val,n}=vizData; const dp=Array(n+1).fill(0).map(()=>Array(W+1).fill(0));
+  animSteps.push({type:'init',op:`容量W=${W},物品数n=${n}`,dp:clone(dp),i:0,w:-1});
+  for(let i=1;i<=n;i++){ for(let w=0;w<=W;w++){
+    if(wt[i-1]<=w){ const no=dp[i-1][w],yes=dp[i-1][w-wt[i-1]]+val[i-1]; dp[i][w]=Math.max(no,yes);
+      animSteps.push({type:'calc',op:`dp[${i}][${w}]:物品${i}(wt=${wt[i-1]},val=${val[i-1]}),max(不选=${no},选=${yes})=${dp[i][w]}`,dp:clone(dp),i,w}); }
+    else { dp[i][w]=dp[i-1][w]; animSteps.push({type:'skip',op:`dp[${i}][${w}]:太重,继承=${dp[i][w]}`,dp:clone(dp),i,w}); }
+  }}
+  animSteps.push({type:'done',op:`最大价值=dp[${n}][${W}]=${dp[n][W]}`,dp:clone(dp),i:n,w:W});
+}
+
+function renderViz(){
+  const s=animSteps[curStep]; if(!s) return; const svg=el('v-canvas'); svg.innerHTML=''; const{W,n}=vizData;
+  const cw=48,ch=32,mx=60,my=30; svg.setAttribute('viewBox',`0 0 ${Math.max(780,mx+(W+1)*cw+20)} ${my+(n+1)*ch+20}`);
+  for(let i=0;i<=n;i++){ for(let w=0;w<=W;w++){
+    const x=mx+w*cw,y=my+i*ch,isCur=s.i===i&&s.w===w;
+    const r=document.createElementNS('http://www.w3.org/2000/svg','rect'); r.setAttribute('x',x); r.setAttribute('y',y); r.setAttribute('width',cw); r.setAttribute('height',ch);
+    r.setAttribute('fill',isCur?'#fbbf24':i===0||w===0?'#e2e8f0':'#fff'); r.setAttribute('stroke',isCur?'#2563eb':'#cbd5e1'); r.setAttribute('stroke-width',isCur?'2':'1'); svg.appendChild(r);
+    const t=document.createElementNS('http://www.w3.org/2000/svg','text'); t.setAttribute('x',x+cw/2); t.setAttribute('y',y+ch/2+4); t.setAttribute('text-anchor','middle'); t.setAttribute('font-size','11'); t.textContent=s.dp[i][w]; svg.appendChild(t);
+  }}
+  for(let w=0;w<=W;w++){ const t=document.createElementNS('http://www.w3.org/2000/svg','text'); t.setAttribute('x',mx+w*cw+cw/2); t.setAttribute('y',my-8); t.setAttribute('text-anchor','middle'); t.setAttribute('font-size','10'); t.setAttribute('fill','#64748b'); t.textContent=`w=${w}`; svg.appendChild(t); }
+  for(let i=0;i<=n;i++){ const t=document.createElementNS('http://www.w3.org/2000/svg','text'); t.setAttribute('x',mx-10); t.setAttribute('y',my+i*ch+ch/2+4); t.setAttribute('text-anchor','end'); t.setAttribute('font-size','10'); t.setAttribute('fill','#64748b'); t.textContent=`i=${i}`; svg.appendChild(t); }
+  el('v-status').textContent=s.op; el('v-cell').textContent=s.i>0&&s.w>=0?`dp[${s.i}][${s.w}]`:'--';
+  el('v-dpinfo').innerHTML=`<b>物品:</b> ${vizData.wt.map((w,i)=>`物品${i+1}:wt=${w},val=${vizData.val[i]}`).join(' | ')}`;
+}
+function loadViz(p){ vizData=PRESETS[p]; buildSteps(); curStep=0; renderViz(); }
+{% endif %}
+
+function bindVizCtrls(){
+  const btns={load:'v-load',start:'v-start',step:'v-step',auto:'v-auto',pause:'v-pause',reset:'v-reset'};
+  const lb=el(btns.load), sb=el(btns.start), stb=el(btns.step), ab=el(btns.auto), pb=el(btns.pause), rb=el(btns.reset);
+  if(lb) lb.onclick=()=>loadViz(el('preset-select').value);
+  if(sb) sb.onclick=()=>{curStep=0;renderViz();};
+  if(stb) stb.onclick=nextStep;
+  if(ab) ab.onclick=startAuto;
+  if(pb) pb.onclick=pauseAuto;
+  if(rb) rb.onclick=()=>{pauseAuto();curStep=0;renderViz();};
+}
+{% endif %}
+
+// ===== BIND ALL =====
+function bindAll(){
+  {% if content.get('has_visualization') %}bindVizCtrls();{% endif %}
+  el('chat-send-btn').onclick=()=>sendChat('');
+  el('chat-input').addEventListener('keydown',e=>{if(e.key==='Enter')sendChat('');});
+  {% if content.get('has_code') %}
+  if(el('knowledge-ask-btn')) el('knowledge-ask-btn').onclick=()=>{
+    const topic=el('knowledge-topic').textContent;
+    if(topic==='点击代码行查看'||!topic){ const fb=el('knowledge-feedback'); fb.innerHTML='<span style="color:#ca8a04">请先点击左侧代码行选择知识点。</span>'; setTimeout(()=>{fb.innerHTML='';},2500); return; }
+    sendChat(topic);
+  };
+  {% endif %}
+  el('generate-quiz-btn').onclick=()=>{const d=el('quiz-difficulty-filter').value;loadQuiz(d||undefined);};
+  el('next-quiz-btn').onclick=()=>{if(quizQuestions.length===0)loadQuiz();else{quizIdx=(quizIdx+1)%quizQuestions.length;renderQuiz();}};
+  el('analyze-btn').onclick=generateReport;
+  el('save-profile-btn').onclick=async()=>{await syncProfile();el('skill-box').innerHTML='<span style="color:#16a34a">学习进度已保存。</span>';};
+}
+
+// ===== INIT =====
+{% if content.get('has_code') %}renderCodeBox();{% endif %}
+bindAll();
+{% if content.get('has_visualization') %}loadViz(el('preset-select')?el('preset-select').value:'basic');{% endif %}
+</script>
+{% endblock %}

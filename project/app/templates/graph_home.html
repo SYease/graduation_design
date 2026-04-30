@@ -1,0 +1,391 @@
+{% extends 'base.html' %}
+{% block title %}首页知识图谱{% endblock %}
+{% block head %}
+<style>
+  html, body { height:100%; overflow:hidden; }
+  .container { max-width:none; margin:0; padding:0; height:calc(100vh - 52px); }
+  .graph-wrap { position:relative; width:100%; height:100%; background:#f8fbff; overflow:hidden; }
+  .search-overlay { position:absolute; top:12px; left:12px; z-index:10; width:300px; }
+  .search-overlay .mini-card { background:rgba(255,255,255,.94); backdrop-filter:blur(8px); border:1px solid #dbe4f3; border-radius:10px; padding:10px 12px; box-shadow:0 4px 16px rgba(15,23,42,.08); font-size:13px; position:relative; }
+  .cat-tabs { position:absolute; top:12px; left:50%; transform:translateX(-50%); z-index:10; display:flex; gap:4px; background:rgba(255,255,255,.94); backdrop-filter:blur(8px); border:1px solid #dbe4f3; border-radius:10px; padding:5px; box-shadow:0 4px 16px rgba(15,23,42,.08); }
+  .cat-tab { padding:5px 12px; border-radius:7px; font-size:12px; cursor:pointer; border:none; background:transparent; color:#475569; font-weight:500; white-space:nowrap; transition:all .15s; }
+  .cat-tab:hover { background:#f1f5f9; color:#1e293b; }
+  .cat-tab.active { background:#2563eb; color:#fff; }
+  .cat-tab .cnt { font-size:10px; opacity:.6; margin-left:2px; }
+  .filter-bar { position:absolute; bottom:12px; left:50%; transform:translateX(-50%); z-index:10; background:rgba(255,255,255,.92); backdrop-filter:blur(8px); border:1px solid #dbe4f3; border-radius:10px; padding:8px 16px; box-shadow:0 4px 16px rgba(15,23,42,.08); display:flex; gap:16px; align-items:center; font-size:13px; }
+  .filter-bar label { cursor:pointer; display:flex; align-items:center; gap:4px; white-space:nowrap; }
+  .filter-bar .dot { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:2px; }
+  .hero-badge { position:absolute; top:52px; right:12px; z-index:10; background:rgba(15,23,42,.85); color:#e2e8f0; border-radius:10px; padding:5px 12px; font-size:12px; font-weight:700; backdrop-filter:blur(8px); pointer-events:none; }
+  .zoom-hint { position:absolute; bottom:40px; right:12px; z-index:10; font-size:11px; color:#94a3b8; background:rgba(255,255,255,.85); padding:4px 8px; border-radius:6px; }
+  .graph-container { cursor:grab; width:100%; height:100%; overflow:hidden; user-select:none; -webkit-user-select:none; }
+  .graph-container:active { cursor:grabbing; }
+  .graph-wrap { user-select:none; -webkit-user-select:none; }
+  #suggestions { position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:20; display:flex;flex-direction:column;gap:6px; max-height:320px; overflow:auto; }
+  #graph { width:100%; height:100%; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="graph-wrap">
+  <!-- Search: top-left -->
+  <div class="search-overlay">
+    <div class="mini-card">
+      <input id="searchInput" placeholder="搜索知识点（名称/摘要）..." style="width:100%;font-size:13px;border:none;padding:8px 0;outline:none" />
+      <div id="suggestions"></div>
+    </div>
+  </div>
+  <!-- Category tabs: top center -->
+  <div class="cat-tabs" id="catTabs"></div>
+  <!-- Title: top-right -->
+  <div class="hero-badge" id="catLabel">全部 94</div>
+  <!-- Filter: bottom center -->
+  <div class="filter-bar">
+    <span class="muted" style="font-size:12px">筛选：</span>
+    <label><span class="dot" style="background:#16a34a"></span><input type="checkbox" class="difficulty-filter" value="easy" checked/> 简单</label>
+    <label><span class="dot" style="background:#ca8a04"></span><input type="checkbox" class="difficulty-filter" value="medium" checked/> 中等</label>
+    <label><span class="dot" style="background:#dc2626"></span><input type="checkbox" class="difficulty-filter" value="hard" checked/> 困难</label>
+  </div>
+  <div id="tooltip" style="display:none;position:absolute;z-index:999;pointer-events:none;background:white;border:1px solid #dbe4f3;border-radius:12px;padding:12px 14px;box-shadow:0 10px 30px rgba(0,0,0,0.15);font-size:13px;max-width:280px;line-height:1.6"></div>
+  <div class="graph-container" id="graphContainer">
+    <svg id="graph"></svg>
+  </div>
+  <div class="zoom-hint">滚轮缩放 · 拖拽平移 · 点击节点进入学习</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let graphData = {nodes: [], edges: []};
+let highlightedCode = '';
+let activeCategory = 'all';
+let svgW = 980, svgH = 520;
+// Zoom/drag state
+let viewX = 0, viewY = 0, scale = 1;
+let dragging = false, dragStartX = 0, dragStartY = 0, dragStartVX = 0, dragStartVY = 0;
+
+const CAT_LABELS = {
+  'all':'全部', 'basic':'基础算法', 'ds':'数据结构', 'graph':'图论',
+  'algorithm':'图论算法', 'analysis':'算法分析', 'concept':'基本概念', 'foundation':'基础',
+  'dp':'动态规划', 'math':'数论', 'string':'字符串', 'greedy':'贪心', 'geometry':'计算几何'
+};
+const CAT_ORDER = ['all','basic','ds','graph','algorithm','dp','math','string','greedy','geometry','concept','foundation','analysis'];
+
+function getCat(n){ return n.category || 'concept'; }
+function buildCatTabs(){
+  const box = document.getElementById('catTabs');
+  const counts = {};
+  let total = 0;
+  graphData.nodes.forEach(n => {
+    const c = getCat(n);
+    // Merge algorithm into graph for display
+    const dc = (c === 'algorithm') ? 'graph' : c;
+    counts[dc] = (counts[dc]||0) + 1;
+    total++;
+  });
+  counts['all'] = total;
+
+  box.innerHTML = CAT_ORDER.filter(c => counts[c]).map(c => {
+    const active = c === activeCategory ? ' active' : '';
+    const cnt = counts[c];
+    return `<button class="cat-tab${active}" data-cat="${c}" onclick="switchCategory('${c}')">${CAT_LABELS[c]}<span class="cnt">${cnt}</span></button>`;
+  }).join('');
+}
+
+function switchCategory(cat){
+  activeCategory = cat;
+  viewX = 0; viewY = 0; scale = 1;
+  document.getElementById('catLabel').textContent = CAT_LABELS[cat] + ' ' +
+    graphData.nodes.filter(n => (activeCategory==='all'||getCat(n)===cat||(cat==='graph'&&getCat(n)==='algorithm'))).length;
+  buildCatTabs();
+  renderGraph();
+}
+
+function difficultyClass(d){
+  if(d === 'easy') return 'easy';
+  if(d === 'hard') return 'hard';
+  return 'medium';
+}
+
+function getEnabledDifficulties(){
+  return Array.from(document.querySelectorAll('.difficulty-filter:checked')).map(el => el.value);
+}
+
+function createTopoLayout(nodes, edges){
+  const SUB_COL_W = 170, ROW_H = 44, MX = 50, MY = 50;
+
+  const diffCols = [
+    {key:'easy', name:'简单', nodes:[], color:'#16a34a', bg:'#dcfce7'},
+    {key:'medium', name:'中等', nodes:[], color:'#ca8a04', bg:'#fef3c7'},
+    {key:'hard', name:'困难', nodes:[], color:'#dc2626', bg:'#fee2e2'}
+  ];
+
+  // Group by difficulty
+  const nodeById = {}; nodes.forEach(n => { nodeById[n.id] = n; });
+  nodes.forEach(n => {
+    const col = diffCols.find(c => c.key === n.difficulty) || diffCols[1];
+    col.nodes.push(n);
+  });
+
+  // Within each difficulty column, assign sub-levels via topological sort
+  // Only consider edges where BOTH endpoints are in the SAME difficulty column
+  let totalSubCols = 0;
+  diffCols.forEach(col => {
+    const colCodes = new Set(col.nodes.map(n => n.code));
+    const adj = {}, indeg = {};
+    col.nodes.forEach(n => { adj[n.code] = []; indeg[n.code] = 0; });
+    edges.forEach(e => {
+      const sn = nodeById[e.source_node_id];
+      const tn = nodeById[e.target_node_id];
+      if(sn && tn && colCodes.has(sn.code) && colCodes.has(tn.code)){
+        adj[sn.code].push(tn.code); indeg[tn.code]++;
+      }
+    });
+    // Kahn assign sub-levels
+    const subLevel = {}, q = [];
+    col.nodes.forEach(n => { if(indeg[n.code] === 0){ subLevel[n.code] = 0; q.push(n.code); } });
+    if(q.length === 0 && col.nodes.length > 0){ subLevel[col.nodes[0].code] = 0; q.push(col.nodes[0].code); }
+    while(q.length > 0){
+      const c = q.shift();
+      (adj[c]||[]).forEach(next => {
+        const cand = subLevel[c] + 1;
+        if(!(next in subLevel) || subLevel[next] < cand) subLevel[next] = cand;
+        indeg[next]--; if(indeg[next] === 0) q.push(next);
+      });
+    }
+    const maxLvl = Object.keys(subLevel).length ? Math.max(...Object.values(subLevel)) : 0;
+    col.nodes.forEach(n => { if(!(n.code in subLevel)) subLevel[n.code] = maxLvl + 1; });
+
+    // Store sub-level count for this column
+    col.subLevels = Math.max(...Object.values(subLevel), 0) + 1;
+    col.nodes.forEach(n => { n._subLvl = subLevel[n.code]; });
+    totalSubCols += col.subLevels;
+  });
+
+  // Layout: each difficulty column is subColX wide, containing subLevels sub-columns
+  let cursorX = MX;
+  const activeCols = diffCols.filter(c => c.nodes.length > 0);
+  activeCols.forEach(col => {
+    col.startX = cursorX;
+    col.width = col.subLevels * SUB_COL_W;
+    cursorX += col.width + 30; // gap between difficulty columns
+  });
+  svgW = cursorX - 30 + MX;
+
+  const maxPer = Math.max(...activeCols.map(c => {
+    // Count max nodes per sub-level
+    const counts = {};
+    c.nodes.forEach(n => { const sl = n._subLvl; counts[sl] = (counts[sl]||0) + 1; });
+    return Math.max(...Object.values(counts), 1);
+  }), 1);
+  svgH = Math.max(maxPer * ROW_H + MY * 2, 400);
+
+  const map = {};
+  activeCols.forEach((col, ci) => {
+    // Count nodes per sub-level
+    const subCounts = {};
+    col.nodes.forEach(n => { const sl = n._subLvl; subCounts[sl] = (subCounts[sl]||0) + 1; });
+
+    col.nodes.forEach(n => {
+      const sl = n._subLvl;
+      // Which row within this sub-level?
+      const sameSubNodes = col.nodes.filter(x => x._subLvl === sl).sort((a,b) => a.name.localeCompare(b.name));
+      const rowIdx = sameSubNodes.indexOf(n);
+      const totalInSub = sameSubNodes.length;
+      const th = totalInSub * ROW_H;
+      const sy = (svgH - th) / 2;
+      const x = col.startX + sl * SUB_COL_W;
+      const y = sy + rowIdx * ROW_H + ROW_H/2;
+      map[n.code] = {x, y, colIdx: ci, subLvl: sl, colName: col.name, colColor: col.color};
+    });
+  });
+  return {map, activeCols};
+}
+
+function renderGraph(){
+  const svg = document.getElementById('graph');
+  const tooltip = document.getElementById('tooltip');
+  svg.innerHTML = '';
+  const allowed = new Set(getEnabledDifficulties());
+  // Filter by difficulty AND category
+  const nodes = graphData.nodes.filter(n => {
+    if(!allowed.has(n.difficulty || 'medium')) return false;
+    if(activeCategory === 'all') return true;
+    const c = getCat(n);
+    if(activeCategory === 'graph') return c === 'graph' || c === 'algorithm';
+    return c === activeCategory;
+  });
+  const nodeCodes = new Set(nodes.map(n => n.code));
+  const filteredEdges = graphData.edges.filter(e => {
+    const s = graphData.nodes.find(n => n.id === e.source_node_id);
+    const t = graphData.nodes.find(n => n.id === e.target_node_id);
+    return s && t && nodeCodes.has(s.code) && nodeCodes.has(t.code);
+  });
+  const {map, activeCols} = createTopoLayout(nodes, filteredEdges);
+  const NW = 140, NH = 36;
+
+  const containerEl = document.getElementById('graphContainer');
+  const cw = containerEl.clientWidth || window.innerWidth;
+  const ch = containerEl.clientHeight || window.innerHeight;
+  // SVG total space = max(content size, container size)
+  const totalW = Math.max(svgW, cw);
+  const totalH = Math.max(svgH, ch);
+  svg.setAttribute('viewBox', `${viewX} ${viewY} ${totalW / scale} ${totalH / scale}`);
+  svg.style.width = totalW + 'px';
+  svg.style.height = totalH + 'px';
+
+  const prereqCount = {}, succCount = {};
+  filteredEdges.forEach(e => {
+    const tn = graphData.nodes.find(n => n.id === e.target_node_id);
+    const sn = graphData.nodes.find(n => n.id === e.source_node_id);
+    if(tn) prereqCount[tn.code] = (prereqCount[tn.code] || 0) + 1;
+    if(sn) succCount[sn.code] = (succCount[sn.code] || 0) + 1;
+  });
+
+  // Arrow marker
+  const defs = document.createElementNS('http://www.w3.org/2000/svg','defs');
+  const marker = document.createElementNS('http://www.w3.org/2000/svg','marker');
+  marker.setAttribute('id','arrow'); marker.setAttribute('markerWidth','8'); marker.setAttribute('markerHeight','6'); marker.setAttribute('refX','8'); marker.setAttribute('refY','3'); marker.setAttribute('orient','auto');
+  const ap = document.createElementNS('http://www.w3.org/2000/svg','polygon'); ap.setAttribute('points','0 0, 8 3, 0 6'); ap.setAttribute('fill','#94a3b8');
+  marker.appendChild(ap); defs.appendChild(marker); svg.appendChild(defs);
+
+  // Column headers — span the difficulty column
+  activeCols.forEach(col => {
+    const cx = col.startX + col.width / 2;
+    const bg = document.createElementNS('http://www.w3.org/2000/svg','rect');
+    bg.setAttribute('x', col.startX + 4); bg.setAttribute('y', 8); bg.setAttribute('width', col.width - 8); bg.setAttribute('height', 22); bg.setAttribute('rx', '11');
+    bg.setAttribute('fill', col.bg); bg.setAttribute('stroke', col.color); bg.setAttribute('stroke-width', '1.5');
+    svg.appendChild(bg);
+    const label = document.createElementNS('http://www.w3.org/2000/svg','text');
+    label.setAttribute('x', cx); label.setAttribute('y', 23); label.setAttribute('text-anchor','middle');
+    label.setAttribute('font-size', '12'); label.setAttribute('font-weight', 'bold'); label.setAttribute('fill', col.color);
+    label.textContent = col.name + ' (' + col.nodes.length + ')'; svg.appendChild(label);
+  });
+
+  // Edges — same-difficulty edges are inside sub-columns, cross-difficulty span columns
+  filteredEdges.forEach(e => {
+    const sn = graphData.nodes.find(n => n.id === e.source_node_id);
+    const tn = graphData.nodes.find(n => n.id === e.target_node_id);
+    if(!sn || !tn) return;
+    const s = map[sn.code], t = map[tn.code]; if(!s || !t) return;
+
+    if(s.colIdx === t.colIdx){
+      // Same difficulty: straight line between sub-columns, slightly curved
+      const midX = (s.x + t.x) / 2 + NW/2;
+      const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+      path.setAttribute('d', `M${s.x + NW} ${s.y} Q${midX} ${(s.y+t.y)/2} ${t.x - 4} ${t.y}`);
+      path.setAttribute('fill','none'); path.setAttribute('stroke', s.colColor); path.setAttribute('stroke-width','1.8');
+      path.setAttribute('stroke-dasharray','4 3'); path.setAttribute('marker-end','url(#arrow)'); path.setAttribute('opacity','0.6');
+      svg.appendChild(path);
+    } else {
+      // Cross difficulty: solid straight line
+      const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+      line.setAttribute('x1', s.x + NW); line.setAttribute('y1', s.y);
+      line.setAttribute('x2', t.x - 4); line.setAttribute('y2', t.y);
+      line.setAttribute('stroke', s.colColor); line.setAttribute('stroke-width','2.2'); line.setAttribute('marker-end','url(#arrow)'); line.setAttribute('opacity','0.5');
+      svg.appendChild(line);
+    }
+  });
+
+  // Nodes
+  nodes.forEach(n => {
+    const p = map[n.code]; if(!p) return;
+    const g = document.createElementNS('http://www.w3.org/2000/svg','g'); g.style.cursor = 'pointer';
+    const isHL = highlightedCode === n.code;
+    const rect = document.createElementNS('http://www.w3.org/2000/svg','rect');
+    rect.setAttribute('x', p.x); rect.setAttribute('y', p.y - NH/2); rect.setAttribute('width', NW); rect.setAttribute('height', NH); rect.setAttribute('rx', '10');
+    rect.setAttribute('fill', n.difficulty === 'hard' ? '#fecaca' : n.difficulty === 'easy' ? '#bbf7d0' : '#fde68a');
+    rect.setAttribute('stroke', isHL ? '#2563eb' : '#475569'); rect.setAttribute('stroke-width', isHL ? '3' : '1.5');
+    if(isHL) rect.setAttribute('filter', 'drop-shadow(0 0 6px rgba(37,99,235,.4))');
+    g.appendChild(rect);
+    const dot = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    dot.setAttribute('cx', p.x + 12); dot.setAttribute('cy', p.y - NH/2 + 12); dot.setAttribute('r', '5');
+    dot.setAttribute('fill', n.difficulty === 'hard' ? '#dc2626' : n.difficulty === 'easy' ? '#16a34a' : '#ca8a04'); g.appendChild(dot);
+    const t = document.createElementNS('http://www.w3.org/2000/svg','text');
+    t.setAttribute('x', p.x + NW/2); t.setAttribute('y', p.y + 5); t.setAttribute('text-anchor', 'middle'); t.setAttribute('font-size', '13'); t.setAttribute('font-weight', 'bold'); t.setAttribute('fill', '#1e293b'); t.textContent = n.name; g.appendChild(t);
+
+    g.addEventListener('mouseenter', () => {
+      tooltip.innerHTML = `<b style="font-size:14px">${n.name}</b> <span class="badge ${difficultyClass(n.difficulty)}">${n.difficulty}</span><br/><span class="muted">${n.summary || '暂无摘要'}</span><br/><span style="font-size:12px">分类: ${CAT_LABELS[getCat(n)]||getCat(n)} | 前置: ${prereqCount[n.code]||0} | 后继: ${succCount[n.code]||0}</span><br/><span style="font-size:11px;color:#3b82f6">点击进入学习页</span>`;
+      tooltip.style.display = 'block';
+    });
+    g.addEventListener('mousemove', evt => {
+      const rc = document.querySelector('.graph-wrap').getBoundingClientRect();
+      tooltip.style.left = Math.min(evt.clientX - rc.left + 15, rc.width - 290) + 'px';
+      tooltip.style.top = Math.min(evt.clientY - rc.top - 10, rc.height - 120) + 'px';
+    });
+    g.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
+    g.addEventListener('click', () => window.location.href = `/learn/${n.code}`);
+    svg.appendChild(g);
+  });
+}
+
+// ===== ZOOM & DRAG =====
+const container = document.getElementById('graphContainer');
+container.addEventListener('wheel', e => {
+  e.preventDefault();
+  const delta = e.deltaY > 0 ? 1.1 : 0.9;
+  const newScale = Math.min(3, Math.max(0.3, scale * delta));
+  const rect = container.getBoundingClientRect();
+  const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+  viewX += mx / scale - mx / newScale;
+  viewY += my / scale - my / newScale;
+  scale = newScale;
+  renderGraph();
+}, {passive:false});
+
+container.addEventListener('mousedown', e => {
+  if(e.target.closest('circle') || e.target.closest('rect')) return;
+  e.preventDefault();
+  dragging = true; dragStartX = e.clientX; dragStartY = e.clientY; dragStartVX = viewX; dragStartVY = viewY;
+});
+window.addEventListener('mousemove', e => {
+  if(!dragging) return;
+  viewX = dragStartVX - (e.clientX - dragStartX) / scale;
+  viewY = dragStartVY - (e.clientY - dragStartY) / scale;
+  renderGraph();
+});
+window.addEventListener('mouseup', () => { dragging = false; });
+
+// ===== SEARCH =====
+function renderSuggestions(items){
+  const box = document.getElementById('suggestions'); box.innerHTML = '';
+  if(!items.length) return;
+  items.forEach(item => {
+    const div = document.createElement('div'); div.className = 'mini-card'; div.style.padding = '8px';
+    div.innerHTML = `<b>${item.name}</b> <span class="badge ${difficultyClass(item.difficulty)}">${item.difficulty}</span><div class="muted">${item.summary || ''}</div>`;
+    const row = document.createElement('div'); row.style.marginTop = '6px'; row.style.display = 'flex'; row.style.gap = '6px';
+    const lb = document.createElement('button'); lb.className = 'btn secondary'; lb.style.cssText = 'padding:4px 8px;font-size:12px'; lb.textContent = '图上定位';
+    lb.onclick = () => { highlightedCode = item.code; renderGraph(); };
+    const lrb = document.createElement('button'); lrb.className = 'btn'; lrb.style.cssText = 'padding:4px 8px;font-size:12px'; lrb.textContent = '进入学习';
+    lrb.onclick = () => window.location.href = item.action_learn.url;
+    row.appendChild(lb); row.appendChild(lrb); div.appendChild(row); box.appendChild(div);
+  });
+}
+
+async function loadKnowledge(){
+  const res = await fetch('/api/knowledge'); const data = await res.json();
+  if(data.success){
+    graphData = data;
+    // Auto-seed if graph is empty (first run)
+    if(!data.nodes || data.nodes.length === 0){
+      await fetch('/seed');
+      const r2 = await fetch('/api/knowledge'); const d2 = await r2.json();
+      if(d2.success) graphData = d2;
+    }
+    buildCatTabs();
+    renderGraph();
+  }
+}
+
+let searchTimer = null;
+document.getElementById('searchInput').addEventListener('input', e => {
+  const q = e.target.value.trim(); clearTimeout(searchTimer);
+  searchTimer = setTimeout(async () => {
+    if(!q){ renderSuggestions([]); return; }
+    const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`); const data = await res.json();
+    renderSuggestions(data.items || []);
+  }, 200);
+});
+
+document.querySelectorAll('.difficulty-filter').forEach(el => el.addEventListener('change', renderGraph));window.addEventListener('resize', () => { renderGraph(); });
+loadKnowledge();
+</script>
+{% endblock %}

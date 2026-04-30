@@ -1,0 +1,737 @@
+[
+  {
+    "code": "graph-representation",
+    "name": "图的表示",
+    "summary": "邻接矩阵、邻接表等图的存储方式。",
+    "difficulty": "easy",
+    "category": "foundation",
+    "content_type": "foundation"
+  },
+  {
+    "code": "graph-basics",
+    "name": "图论基础",
+    "summary": "理解图、边、权重、连通性等概念。",
+    "difficulty": "easy",
+    "category": "foundation",
+    "content_type": "foundation"
+  },
+  {
+    "code": "mst-goal",
+    "name": "最小生成树目标",
+    "summary": "掌握最小生成树的连通、无环、最小权值目标。",
+    "difficulty": "easy",
+    "category": "concept",
+    "content_type": "concept"
+  },
+  {
+    "code": "greedy-strategy",
+    "name": "贪心策略",
+    "summary": "理解每一步做局部最优选择的思路。",
+    "difficulty": "easy",
+    "category": "concept",
+    "content_type": "concept"
+  },
+  {
+    "code": "edge-sorting",
+    "name": "边排序",
+    "summary": "按边权从小到大排序，为 Kruskal 逐步选边做准备。",
+    "difficulty": "easy",
+    "category": "algorithm"
+  },
+  {
+    "code": "union-find",
+    "name": "并查集",
+    "summary": "并查集数据结构用于高效管理连通分量，替代传统标号法。",
+    "difficulty": "medium",
+    "category": "algorithm"
+  },
+  {
+    "code": "cycle-detection",
+    "name": "成环判断",
+    "summary": "用并查集 find(u)==find(v) 判断加入边是否会形成环。",
+    "difficulty": "medium",
+    "category": "algorithm"
+  },
+  {
+    "code": "kruskal-core",
+    "name": "Kruskal 核心流程",
+    "summary": "排序、并查集判环、选边合并构成 Kruskal 主流程。",
+    "difficulty": "medium",
+    "category": "algorithm"
+  },
+  {
+    "code": "prim-algorithm",
+    "name": "Prim算法",
+    "summary": "从顶点出发逐步扩展生成树的贪心算法。",
+    "difficulty": "medium",
+    "category": "algorithm"
+  },
+  {
+    "code": "complexity-analysis",
+    "name": "复杂度分析",
+    "summary": "分析 Kruskal 的时间复杂度与实现代价。",
+    "difficulty": "hard",
+    "category": "analysis"
+  },
+  {
+    "code": "path-comparison",
+    "name": "Kruskal 与 Prim 对比",
+    "summary": "理解两种最小生成树算法的差异与适用场景。",
+    "difficulty": "hard",
+    "category": "analysis"
+  },
+  {
+    "code": "bfs-traversal",
+    "name": "BFS遍历",
+    "summary": "广度优先搜索，使用队列逐层遍历图。",
+    "difficulty": "easy",
+    "category": "algorithm"
+  },
+  {
+    "code": "dfs-traversal",
+    "name": "DFS遍历",
+    "summary": "深度优先搜索，使用递归或栈深入探索图。",
+    "difficulty": "easy",
+    "category": "algorithm"
+  },
+  {
+    "code": "shortest-path-overview",
+    "name": "最短路径概述",
+    "summary": "了解单源最短路径与全源最短路径问题的定义。",
+    "difficulty": "easy",
+    "category": "concept",
+    "content_type": "concept"
+  },
+  {
+    "code": "dijkstra-algorithm",
+    "name": "Dijkstra最短路径",
+    "summary": "贪心策略求解非负权图的单源最短路径。",
+    "difficulty": "medium",
+    "category": "algorithm"
+  },
+  {
+    "code": "quick-sort",
+    "name": "快速排序",
+    "summary": "分治法选基准并分区递归排序。",
+    "difficulty": "medium",
+    "category": "algorithm"
+  },
+  {
+    "code": "merge-sort",
+    "name": "归并排序",
+    "summary": "分治法将数组二分后合并有序子数组。",
+    "difficulty": "medium",
+    "category": "algorithm"
+  },
+  {
+    "code": "sorting-comparison",
+    "name": "排序算法对比",
+    "summary": "比较各排序算法的时间、空间与稳定性。",
+    "difficulty": "hard",
+    "category": "analysis"
+  },
+  {
+    "code": "dp-intro",
+    "name": "动态规划入门",
+    "summary": "理解最优子结构和重叠子问题的 DP 核心思想。",
+    "difficulty": "medium",
+    "category": "concept",
+    "content_type": "concept"
+  },
+  {
+    "code": "knapsack-01",
+    "name": "01背包问题",
+    "summary": "经典 DP 问题：在容量限制下选择物品使价值最大。",
+    "difficulty": "medium",
+    "category": "algorithm"
+  },
+  {
+    "code": "dp-vs-greedy",
+    "name": "DP与贪心对比",
+    "summary": "理解 DP 全局最优与贪心局部最优的差异。",
+    "difficulty": "hard",
+    "category": "analysis"
+  },
+  {
+    "code": "binary-tree",
+    "name": "二叉树基础",
+    "summary": "理解二叉树、完全二叉树、满二叉树的结构与性质。",
+    "difficulty": "easy",
+    "category": "foundation",
+    "content_type": "foundation"
+  },
+  {
+    "code": "bst-operations",
+    "name": "二叉搜索树操作",
+    "summary": "BST 的查找、插入、删除及平衡概念。",
+    "difficulty": "medium",
+    "category": "algorithm"
+  },
+  {
+    "code": "tree-traversal",
+    "name": "树的遍历",
+    "summary": "前序、中序、后序与层序遍历二叉树。",
+    "difficulty": "easy",
+    "category": "algorithm"
+  },
+  {
+    "code": "enumeration",
+    "name": "枚举与模拟",
+    "summary": "穷举所有可能解，按规则逐步模拟执行。",
+    "difficulty": "easy",
+    "category": "basic",
+    "content_type": "concept"
+  },
+  {
+    "code": "recursion-divide",
+    "name": "递归与分治",
+    "summary": "大问题分解为子问题，递归求解后合并结果。",
+    "difficulty": "easy",
+    "category": "basic",
+    "content_type": "concept"
+  },
+  {
+    "code": "binary-search",
+    "name": "二分查找",
+    "summary": "有序序列中折半搜索目标值，O(log n)。",
+    "difficulty": "easy",
+    "category": "basic",
+    "content_type": "concept"
+  },
+  {
+    "code": "binary-answer",
+    "name": "二分答案",
+    "summary": "将最优化问题转化为判定问题，二分枚举答案。",
+    "difficulty": "medium",
+    "category": "basic",
+    "content_type": "concept"
+  },
+  {
+    "code": "prefix-sum",
+    "name": "前缀和与差分",
+    "summary": "预处理前缀数组实现 O(1) 区间求和与区间修改。",
+    "difficulty": "easy",
+    "category": "basic",
+    "content_type": "concept"
+  },
+  {
+    "code": "two-pointer",
+    "name": "双指针",
+    "summary": "两指针协同移动，常用于有序数组的查找与去重。",
+    "difficulty": "easy",
+    "category": "basic",
+    "content_type": "concept"
+  },
+  {
+    "code": "sliding-window",
+    "name": "滑动窗口",
+    "summary": "维护可变长度的连续子区间，常用于最值/计数。",
+    "difficulty": "easy",
+    "category": "basic",
+    "content_type": "concept"
+  },
+  {
+    "code": "bit-operation",
+    "name": "位运算",
+    "summary": "利用二进制位与/或/异或/移位实现高效计算。",
+    "difficulty": "easy",
+    "category": "basic",
+    "content_type": "concept"
+  },
+  {
+    "code": "discretization",
+    "name": "离散化",
+    "summary": "将大范围稀疏数据映射到连续下标，节省空间。",
+    "difficulty": "easy",
+    "category": "basic",
+    "content_type": "concept"
+  },
+  {
+    "code": "interval-merge",
+    "name": "区间合并",
+    "summary": "将有交集的区间合并为互不相交的区间集。",
+    "difficulty": "easy",
+    "category": "basic",
+    "content_type": "concept"
+  },
+  {
+    "code": "single-linked-list",
+    "name": "单链表",
+    "summary": "用数组模拟链表节点，头插/删除 O(1)。",
+    "difficulty": "easy",
+    "category": "ds",
+    "content_type": "algorithm"
+  },
+  {
+    "code": "double-linked-list",
+    "name": "双链表",
+    "summary": "左右指针支持双向遍历和 O(1) 节点删除。",
+    "difficulty": "easy",
+    "category": "ds",
+    "content_type": "algorithm"
+  },
+  {
+    "code": "stack-queue",
+    "name": "栈与队列",
+    "summary": "栈 LIFO / 队列 FIFO，用数组模拟实现。",
+    "difficulty": "easy",
+    "category": "ds",
+    "content_type": "algorithm"
+  },
+  {
+    "code": "monotonic-stack",
+    "name": "单调栈",
+    "summary": "维护栈内元素单调性，求 Next Greater Element。",
+    "difficulty": "medium",
+    "category": "ds",
+    "content_type": "algorithm"
+  },
+  {
+    "code": "monotonic-queue",
+    "name": "单调队列",
+    "summary": "滑动窗口最值，队头始终保持区间最优元素。",
+    "difficulty": "medium",
+    "category": "ds",
+    "content_type": "algorithm"
+  },
+  {
+    "code": "kmp-string",
+    "name": "KMP字符串匹配",
+    "summary": "前缀函数 + next 数组，单模式串匹配 O(n+m)。",
+    "difficulty": "medium",
+    "category": "ds",
+    "content_type": "algorithm"
+  },
+  {
+    "code": "trie-tree",
+    "name": "Trie字典树",
+    "summary": "多字符串前缀索引，高效插入与查询。",
+    "difficulty": "medium",
+    "category": "ds",
+    "content_type": "algorithm"
+  },
+  {
+    "code": "heap-ds",
+    "name": "堆",
+    "summary": "完全二叉树结构，插入/删除 O(log n)，堆排序。",
+    "difficulty": "medium",
+    "category": "ds",
+    "content_type": "algorithm"
+  },
+  {
+    "code": "hash-table",
+    "name": "哈希表",
+    "summary": "键值映射，拉链法与开放寻址法处理冲突。",
+    "difficulty": "medium",
+    "category": "ds",
+    "content_type": "algorithm"
+  },
+  {
+    "code": "string-hash",
+    "name": "字符串哈希",
+    "summary": "将字符串映射为整数哈希值，O(1) 判断子串相等。",
+    "difficulty": "medium",
+    "category": "ds",
+    "content_type": "algorithm"
+  },
+  {
+    "code": "fenwick-tree",
+    "name": "树状数组",
+    "summary": "前缀和 + 单点更新 O(log n)，代码简洁。",
+    "difficulty": "medium",
+    "category": "ds",
+    "content_type": "algorithm"
+  },
+  {
+    "code": "segment-tree",
+    "name": "线段树",
+    "summary": "区间查询 + 区间修改 O(log n)，功能强大。",
+    "difficulty": "hard",
+    "category": "ds",
+    "content_type": "algorithm"
+  },
+  {
+    "code": "balanced-tree",
+    "name": "平衡树",
+    "summary": "Treap/Splay 维护动态有序序列，O(log n)。",
+    "difficulty": "hard",
+    "category": "ds",
+    "content_type": "algorithm"
+  },
+  {
+    "code": "persistent-ds",
+    "name": "可持久化数据结构",
+    "summary": "保留历史版本，可持久化 Trie / 线段树。",
+    "difficulty": "hard",
+    "category": "ds",
+    "content_type": "algorithm"
+  },
+  {
+    "code": "graph-storage",
+    "name": "树与图的存储",
+    "summary": "邻接表/邻接矩阵，图的 DFS/BFS 遍历方式。",
+    "difficulty": "easy",
+    "category": "graph",
+    "content_type": "algorithm"
+  },
+  {
+    "code": "topological-sort",
+    "name": "拓扑排序",
+    "summary": "有向无环图的线性排序，BFS 入度为 0 节点入队。",
+    "difficulty": "medium",
+    "category": "graph",
+    "content_type": "algorithm"
+  },
+  {
+    "code": "bellman-ford",
+    "name": "Bellman-Ford",
+    "summary": "可处理负权边的单源最短路，松弛 n-1 轮 O(VE)。",
+    "difficulty": "medium",
+    "category": "graph",
+    "content_type": "algorithm"
+  },
+  {
+    "code": "spfa",
+    "name": "SPFA",
+    "summary": "Bellman-Ford 的队列优化版，稀疏图效率高。",
+    "difficulty": "medium",
+    "category": "graph",
+    "content_type": "algorithm"
+  },
+  {
+    "code": "floyd",
+    "name": "Floyd算法",
+    "summary": "全源最短路，三重循环动态规划 O(n³)。",
+    "difficulty": "medium",
+    "category": "graph",
+    "content_type": "algorithm"
+  },
+  {
+    "code": "bipartite-dye",
+    "name": "染色法判定二分图",
+    "summary": "DFS 交替染色，无冲突则为二分图。",
+    "difficulty": "medium",
+    "category": "graph",
+    "content_type": "algorithm"
+  },
+  {
+    "code": "hungarian",
+    "name": "匈牙利算法",
+    "summary": "二分图最大匹配，增广路思想 O(nm)。",
+    "difficulty": "hard",
+    "category": "graph",
+    "content_type": "algorithm"
+  },
+  {
+    "code": "tarjan-scc",
+    "name": "Tarjan强连通分量",
+    "summary": "DFS 序 + low 数组，缩点成 DAG。",
+    "difficulty": "hard",
+    "category": "graph",
+    "content_type": "algorithm"
+  },
+  {
+    "code": "lca",
+    "name": "最近公共祖先LCA",
+    "summary": "倍增法 / Tarjan 离线求树上两节点 LCA，O(log n)。",
+    "difficulty": "hard",
+    "category": "graph",
+    "content_type": "algorithm"
+  },
+  {
+    "code": "diff-constraint",
+    "name": "差分约束",
+    "summary": "将不等式组转化为图论最短路模型求解。",
+    "difficulty": "hard",
+    "category": "graph",
+    "content_type": "algorithm"
+  },
+  {
+    "code": "network-flow",
+    "name": "网络流初步",
+    "summary": "最大流 Dinic / 最小割定理。",
+    "difficulty": "hard",
+    "category": "graph",
+    "content_type": "algorithm"
+  },
+  {
+    "code": "linear-dp",
+    "name": "线性DP",
+    "summary": "状态按线性顺序转移，如 LIS、编辑距离。",
+    "difficulty": "medium",
+    "category": "dp",
+    "content_type": "algorithm"
+  },
+  {
+    "code": "interval-dp",
+    "name": "区间DP",
+    "summary": "状态为区间 [l,r]，如石子合并问题。",
+    "difficulty": "medium",
+    "category": "dp",
+    "content_type": "algorithm"
+  },
+  {
+    "code": "count-dp",
+    "name": "计数类DP",
+    "summary": "求方案总数，通常需要对大数取模。",
+    "difficulty": "medium",
+    "category": "dp",
+    "content_type": "algorithm"
+  },
+  {
+    "code": "digit-dp",
+    "name": "数位统计DP",
+    "summary": "按数位逐位统计满足条件的数的个数。",
+    "difficulty": "hard",
+    "category": "dp",
+    "content_type": "algorithm"
+  },
+  {
+    "code": "state-compress-dp",
+    "name": "状态压缩DP",
+    "summary": "用二进制位表示集合状态，如 TSP、状压棋盘。",
+    "difficulty": "hard",
+    "category": "dp",
+    "content_type": "algorithm"
+  },
+  {
+    "code": "tree-dp",
+    "name": "树形DP",
+    "summary": "在树结构上做 DP，通常自底向上递归。",
+    "difficulty": "hard",
+    "category": "dp",
+    "content_type": "algorithm"
+  },
+  {
+    "code": "memoization",
+    "name": "记忆化搜索",
+    "summary": "DFS + 缓存已计算结果，避免重复递归。",
+    "difficulty": "medium",
+    "category": "dp",
+    "content_type": "algorithm"
+  },
+  {
+    "code": "prob-dp",
+    "name": "概率DP",
+    "summary": "状态转移包含概率，通常求期望值。",
+    "difficulty": "hard",
+    "category": "dp",
+    "content_type": "algorithm"
+  },
+  {
+    "code": "monotone-queue-dp",
+    "name": "单调队列优化DP",
+    "summary": "用单调队列维护滑动窗口内的决策最优值。",
+    "difficulty": "hard",
+    "category": "dp",
+    "content_type": "algorithm"
+  },
+  {
+    "code": "slope-dp",
+    "name": "斜率优化DP",
+    "summary": "将转移方程变形为斜率形式，维护凸包加速。",
+    "difficulty": "hard",
+    "category": "dp",
+    "content_type": "algorithm"
+  },
+  {
+    "code": "ac-automaton",
+    "name": "AC自动机",
+    "summary": "Trie + KMP 思想，多模式串匹配 O(n+m)。",
+    "difficulty": "hard",
+    "category": "string",
+    "content_type": "concept"
+  },
+  {
+    "code": "manacher",
+    "name": "Manacher算法",
+    "summary": "最长回文子串，线性时间 O(n)。",
+    "difficulty": "hard",
+    "category": "string",
+    "content_type": "concept"
+  },
+  {
+    "code": "suffix-array",
+    "name": "后缀数组",
+    "summary": "所有后缀排序，height 数组求 LCP。",
+    "difficulty": "hard",
+    "category": "string",
+    "content_type": "concept"
+  },
+  {
+    "code": "prime-sieve",
+    "name": "质数筛法",
+    "summary": "埃氏筛 / 线性筛，判断质数与分解质因数。",
+    "difficulty": "medium",
+    "category": "math",
+    "content_type": "concept"
+  },
+  {
+    "code": "divisor-theory",
+    "name": "约数",
+    "summary": "试除法求约数、约数个数与约数之和。",
+    "difficulty": "easy",
+    "category": "math",
+    "content_type": "concept"
+  },
+  {
+    "code": "euler-function",
+    "name": "欧拉函数",
+    "summary": "φ(n)=1~n 中与 n 互质的数的个数。",
+    "difficulty": "medium",
+    "category": "math",
+    "content_type": "concept"
+  },
+  {
+    "code": "fast-power",
+    "name": "快速幂",
+    "summary": "二分思想求 a^b mod p，O(log b)。",
+    "difficulty": "easy",
+    "category": "math",
+    "content_type": "concept"
+  },
+  {
+    "code": "extended-gcd",
+    "name": "扩展欧几里得",
+    "summary": "求 ax+by=gcd(a,b) 的整数解。",
+    "difficulty": "medium",
+    "category": "math",
+    "content_type": "concept"
+  },
+  {
+    "code": "crt",
+    "name": "中国剩余定理",
+    "summary": "解同余方程组 x≡a_i (mod m_i)。",
+    "difficulty": "medium",
+    "category": "math",
+    "content_type": "concept"
+  },
+  {
+    "code": "gauss-elimination",
+    "name": "高斯消元",
+    "summary": "初等行变换求解线性方程组 O(n³)。",
+    "difficulty": "medium",
+    "category": "math",
+    "content_type": "concept"
+  },
+  {
+    "code": "combinatorics",
+    "name": "组合计数",
+    "summary": "递推/逆元求组合数 C(n,m)，Lucas 定理。",
+    "difficulty": "medium",
+    "category": "math",
+    "content_type": "concept"
+  },
+  {
+    "code": "inclusion-exclusion",
+    "name": "容斥原理",
+    "summary": "|A∪B|=|A|+|B|-|A∩B|，推广到多集合。",
+    "difficulty": "medium",
+    "category": "math",
+    "content_type": "concept"
+  },
+  {
+    "code": "game-theory",
+    "name": "博弈论",
+    "summary": "Nim 游戏、SG 函数、有向图游戏。",
+    "difficulty": "hard",
+    "category": "math",
+    "content_type": "concept"
+  },
+  {
+    "code": "matrix-fastpower",
+    "name": "矩阵快速幂",
+    "summary": "矩阵乘法 + 快速幂，加速线性递推。",
+    "difficulty": "medium",
+    "category": "math",
+    "content_type": "concept"
+  },
+  {
+    "code": "interval-greedy-point",
+    "name": "区间选点",
+    "summary": "按右端点排序，每次选最右点覆盖尽可能多区间。",
+    "difficulty": "easy",
+    "category": "greedy",
+    "content_type": "concept"
+  },
+  {
+    "code": "interval-greedy-cover",
+    "name": "区间覆盖",
+    "summary": "从左到右选能覆盖当前起点的最远区间。",
+    "difficulty": "medium",
+    "category": "greedy",
+    "content_type": "concept"
+  },
+  {
+    "code": "interval-greedy-group",
+    "name": "区间分组",
+    "summary": "将区间分为最少组，使组内区间无交集。",
+    "difficulty": "medium",
+    "category": "greedy",
+    "content_type": "concept"
+  },
+  {
+    "code": "huffman-tree",
+    "name": "Huffman树",
+    "summary": "贪心合并最小两堆，求最优前缀编码。",
+    "difficulty": "medium",
+    "category": "greedy",
+    "content_type": "concept"
+  },
+  {
+    "code": "sort-inequality",
+    "name": "排序不等式",
+    "summary": "大配大/小配大原理，调整顺序求最值。",
+    "difficulty": "easy",
+    "category": "greedy",
+    "content_type": "concept"
+  },
+  {
+    "code": "absolute-inequality",
+    "name": "绝对值不等式",
+    "summary": "|x-a|+|x-b| 在 a,b 之间取最小值。",
+    "difficulty": "easy",
+    "category": "greedy",
+    "content_type": "concept"
+  },
+  {
+    "code": "geo-vector",
+    "name": "向量基础",
+    "summary": "点积、叉积、向量夹角的基础运算。",
+    "difficulty": "medium",
+    "category": "geometry",
+    "content_type": "concept"
+  },
+  {
+    "code": "geo-point-segment",
+    "name": "点与线段",
+    "summary": "点到线段距离、点是否在线段上判定。",
+    "difficulty": "medium",
+    "category": "geometry",
+    "content_type": "concept"
+  },
+  {
+    "code": "geo-segment-intersect",
+    "name": "线段相交",
+    "summary": "跨立实验判断两线段是否相交。",
+    "difficulty": "medium",
+    "category": "geometry",
+    "content_type": "concept"
+  },
+  {
+    "code": "geo-convex-hull",
+    "name": "凸包",
+    "summary": "Graham 扫描 / Andrew 算法求凸包。",
+    "difficulty": "hard",
+    "category": "geometry",
+    "content_type": "concept"
+  },
+  {
+    "code": "geo-point-in-polygon",
+    "name": "点在多边形内",
+    "summary": "射线法判定点是否在多边形内部。",
+    "difficulty": "medium",
+    "category": "geometry",
+    "content_type": "concept"
+  }
+]

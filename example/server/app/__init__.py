@@ -56,6 +56,8 @@ def create_app(config_name='default'):
 
     # 在应用上下文中创建所有数据库表
     with app.app_context():
+        import os
+        os.makedirs(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'instance'), exist_ok=True) #确保有数据库存储的目录
         from app import models  # 确保模型被导入，这样db才知道要创建哪些表
         db.create_all()
 

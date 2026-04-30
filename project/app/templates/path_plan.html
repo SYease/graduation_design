@@ -1,0 +1,289 @@
+{% extends 'base.html' %}
+{% block title %}页面三：个性学习路径{% endblock %}
+{% block head %}
+<style>
+  .path-header { background: linear-gradient(135deg, #0f172a, #1d4ed8); color:#e2e8f0; border:none; }
+  .path-header h2 { margin: 0 0 8px; }
+  #pathGraph { line-height: 1.8; }
+  #pathList li { padding: 8px 10px; border:1px solid #dbe4f3; border-radius:10px; background:#f8fbff; }
+  .topo-wrap { position:relative; border:1px solid #e5e7eb; border-radius:12px; background:#f8fbff; overflow:hidden; height:420px; }
+  .topo-container { cursor:grab; width:100%; height:100%; overflow:hidden; }
+  .topo-container:active { cursor:grabbing; }
+  .topo-zoom-hint { position:absolute; bottom:6px; right:10px; font-size:11px; color:#94a3b8; background:rgba(255,255,255,.85); padding:3px 8px; border-radius:6px; pointer-events:none; z-index:10; }
+  #topologySvg { display:block; user-select:none; -webkit-user-select:none; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="card path-header" style="margin-bottom:12px">
+  <h2>个性学习路径规划</h2>
+  <p style="margin:0">选择目标知识点与已掌握内容，自动生成拓扑学习链路与时间估算。</p>
+</div>
+
+<div class="row">
+  <div class="col card">
+    <h3>信息收集</h3>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <label>我想学习的目标知识：</label>
+      <select id="targetCode"></select>
+
+      <label>我想学习的主题（自由输入，可选）：</label>
+      <input id="freeGoal" placeholder="例如：想学动态规划、最短路径..." style="width:100%" />
+
+      <label>我的当前水平：</label>
+      <select id="selfLevel">
+        <option value="beginner">入门 — 刚接触算法</option>
+        <option value="intermediate" selected>中等 — 有基础但需要系统学习</option>
+        <option value="advanced">进阶 — 想深入特定领域</option>
+      </select>
+
+      <label>我已掌握（可多选）：</label>
+      <div id="masteredList" style="max-height:180px;overflow:auto;border:1px solid #e5e7eb;border-radius:8px;padding:8px"></div>
+      <button class="btn" id="genPathBtn">生成学习路径</button>
+    </div>
+  </div>
+  <div class="col card" style="flex:2">
+    <h3>拓扑学习链 <span style="font-size:12px;font-weight:400;color:#94a3b8">滚轮缩放 · 拖拽平移</span></h3>
+    <div class="topo-wrap">
+      <div class="topo-container" id="topoContainer">
+        <svg id="topologySvg"></svg>
+      </div>
+      <div class="topo-zoom-hint">滚轮缩放 · 拖拽平移</div>
+    </div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:12px">
+  <h3>推荐学习路径</h3>
+  <div id="timeEstimate" class="muted" style="margin-bottom:10px"></div>
+  <ol id="pathList"></ol>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let nodes = [];
+let edges = [];
+// Zoom/drag state
+let topoViewX = 0, topoViewY = 0, topoScale = 1;
+let topoDragging = false, topoDragSX = 0, topoDragSY = 0, topoDragVX = 0, topoDragVY = 0;
+let topoSvgW = 800, topoSvgH = 400;
+
+function difficultyWeight(d) { return d === 'easy' ? 1 : d === 'hard' ? 3 : 2; }
+
+async function initNodes(){
+  const res = await fetch('/api/knowledge');
+  const data = await res.json();
+  nodes = data.nodes || [];
+  edges = data.edges || [];
+
+  const target = document.getElementById('targetCode');
+  target.innerHTML = '';
+  nodes.forEach(n => {
+    const opt = document.createElement('option');
+    opt.value = n.code;
+    opt.textContent = `${n.name} (${n.code}) - ${n.difficulty}`;
+    target.appendChild(opt);
+  });
+
+  const box = document.getElementById('masteredList');
+  box.innerHTML = '';
+  nodes.forEach(n => {
+    const row = document.createElement('label');
+    row.style.display = 'block';
+    row.innerHTML = `<input type="checkbox" value="${n.code}" /> ${n.name}`;
+    box.appendChild(row);
+  });
+}
+
+function renderTopology(path, masteredSet){
+  const svg = document.getElementById('topologySvg');
+  svg.innerHTML = '';
+  if(!path.length) return;
+
+  const pathCodes = new Set(path.map(p => p.code));
+  const pathEdges = edges.filter(e => {
+    const sn = nodes.find(n => n.id === e.source_node_id);
+    const tn = nodes.find(n => n.id === e.target_node_id);
+    return sn && tn && pathCodes.has(sn.code) && pathCodes.has(tn.code);
+  });
+
+  const adj = {}, indeg = {};
+  path.forEach(p => { adj[p.code] = []; indeg[p.code] = 0; });
+  pathEdges.forEach(e => {
+    const sn = nodes.find(n => n.id === e.source_node_id);
+    const tn = nodes.find(n => n.id === e.target_node_id);
+    if(sn && tn){ adj[sn.code].push(tn.code); indeg[tn.code]++; }
+  });
+
+  const level = {}, q = [];
+  path.forEach(p => { if(indeg[p.code] === 0){ level[p.code] = 0; q.push(p.code); } });
+  if(q.length === 0 && path.length > 0){ level[path[0].code] = 0; q.push(path[0].code); }
+  while(q.length > 0){
+    const c = q.shift();
+    (adj[c]||[]).forEach(next => {
+      const cand = level[c] + 1;
+      if(!(next in level) || level[next] < cand) level[next] = cand;
+      indeg[next]--; if(indeg[next] === 0) q.push(next);
+    });
+  }
+  const maxLvl = Math.max(...Object.values(level), 0);
+  path.forEach(p => { if(!(p.code in level)) level[p.code] = maxLvl + 1; });
+
+  const groups = {};
+  path.forEach(p => { const l = level[p.code]; if(!groups[l]) groups[l] = []; groups[l].push(p); });
+  const levels = Object.keys(groups).map(Number).sort((a,b)=>a-b);
+
+  // Larger sizes
+  const colW = 180, rowH = 60, mx = 60, my = 50, nw = 140, nh = 38;
+  const maxPer = Math.max(...Object.values(groups).map(g=>g.length), 1);
+  topoSvgH = Math.max(maxPer * rowH + my * 2, 400);
+  topoSvgW = Math.max(levels.length * colW + mx * 2, 700);
+
+  svg.setAttribute('viewBox', `${topoViewX} ${topoViewY} ${topoSvgW / topoScale} ${topoSvgH / topoScale}`);
+  svg.style.width = topoSvgW + 'px';
+  svg.style.height = topoSvgH + 'px';
+
+  // Arrow marker
+  const defs = document.createElementNS('http://www.w3.org/2000/svg','defs');
+  const m = document.createElementNS('http://www.w3.org/2000/svg','marker');
+  m.setAttribute('id','parr'); m.setAttribute('markerWidth','8'); m.setAttribute('markerHeight','6');
+  m.setAttribute('refX','8'); m.setAttribute('refY','3'); m.setAttribute('orient','auto');
+  const ap = document.createElementNS('http://www.w3.org/2000/svg','polygon');
+  ap.setAttribute('points','0 0, 8 3, 0 6'); ap.setAttribute('fill','#94a3b8');
+  m.appendChild(ap); defs.appendChild(m); svg.appendChild(defs);
+
+  // Position map
+  const pos = {};
+  levels.forEach((lvl, li) => {
+    const gn = groups[lvl]; const x = mx + li * colW;
+    const th = gn.length * rowH; const sy = (topoSvgH - th) / 2;
+    gn.forEach((p, i) => { pos[p.code] = {x, y: sy + i * rowH + rowH/2, status: p.status, name: p.name, difficulty: p.difficulty}; });
+  });
+
+  // Edges
+  pathEdges.forEach(e => {
+    const sn = nodes.find(n => n.id === e.source_node_id);
+    const tn = nodes.find(n => n.id === e.target_node_id);
+    const s = pos[sn.code], t = pos[tn.code]; if(!s || !t) return;
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1', s.x + nw); line.setAttribute('y1', s.y);
+    line.setAttribute('x2', t.x - 6); line.setAttribute('y2', t.y);
+    line.setAttribute('stroke','#94a3b8'); line.setAttribute('stroke-width','2');
+    line.setAttribute('marker-end','url(#parr)');
+    svg.appendChild(line);
+  });
+
+  // Level labels
+  levels.forEach((lvl, li) => {
+    const lbl = document.createElementNS('http://www.w3.org/2000/svg','text');
+    lbl.setAttribute('x', mx + li * colW + nw/2); lbl.setAttribute('y', 22);
+    lbl.setAttribute('text-anchor','middle'); lbl.setAttribute('font-size','12'); lbl.setAttribute('fill','#94a3b8');
+    lbl.textContent = `第${lvl+1}层`; svg.appendChild(lbl);
+  });
+
+  // Nodes
+  path.forEach(p => {
+    const pt = pos[p.code]; if(!pt) return;
+    const isMastered = pt.status === 'mastered';
+    const fill = isMastered ? '#bbf7d0' : pt.difficulty === 'hard' ? '#fecaca' : pt.difficulty === 'easy' ? '#e2e8f0' : '#fde68a';
+    const stroke = isMastered ? '#16a34a' : pt.difficulty === 'hard' ? '#dc2626' : pt.difficulty === 'easy' ? '#16a34a' : '#ca8a04';
+
+    const g = document.createElementNS('http://www.w3.org/2000/svg','g'); g.style.cursor = isMastered ? 'default' : 'pointer';
+    const rect = document.createElementNS('http://www.w3.org/2000/svg','rect');
+    rect.setAttribute('x',pt.x); rect.setAttribute('y',pt.y-nh/2); rect.setAttribute('width',nw); rect.setAttribute('height',nh); rect.setAttribute('rx','10');
+    rect.setAttribute('fill',fill); rect.setAttribute('stroke',stroke); rect.setAttribute('stroke-width',isMastered?'2.5':'2');
+    if(isMastered) rect.setAttribute('stroke-dasharray','3 2');
+    g.appendChild(rect);
+
+    const t = document.createElementNS('http://www.w3.org/2000/svg','text');
+    t.setAttribute('x',pt.x + nw/2); t.setAttribute('y',pt.y + 5); t.setAttribute('text-anchor','middle');
+    t.setAttribute('font-size','13'); t.setAttribute('font-weight','bold'); t.setAttribute('fill',isMastered?'#166534':'#1e293b');
+    t.textContent = pt.name;
+    g.appendChild(t);
+
+    if(!isMastered){
+      g.addEventListener('click', ()=> window.location.href = `/learn/${p.code}`);
+    }
+    svg.appendChild(g);
+  });
+}
+
+function renderPath(data){
+  const path = data.path || [];
+  const masteredSet = new Set();
+  path.forEach(p => { if(p.status === 'mastered') masteredSet.add(p.code); });
+  // Reset zoom
+  topoViewX = 0; topoViewY = 0; topoScale = 1;
+  lastPathData = path; lastMasteredSet = masteredSet;
+  renderTopology(path, masteredSet);
+
+  const list = document.getElementById('pathList');
+  list.innerHTML = '';
+
+  // Estimate time
+  const todoItems = path.filter(p => p.status === 'todo');
+  const totalHours = todoItems.reduce((acc, p) => acc + difficultyWeight(p.difficulty) * 1.5, 0);
+  const level = document.getElementById('selfLevel').value;
+  const levelFactor = level === 'beginner' ? 1.5 : level === 'advanced' ? 0.7 : 1.0;
+  const adjusted = Math.round(totalHours * levelFactor);
+  document.getElementById('timeEstimate').innerHTML = `预计学习时间：约 <b>${adjusted}</b> 小时（共 ${todoItems.length} 个知识点）`;
+
+  path.forEach((item, idx) => {
+    const li = document.createElement('li');
+    li.innerHTML = `<b>${idx + 1}.</b> ${item.name} - <span class="badge ${item.difficulty}">${item.difficulty}</span> - ${item.status === 'mastered' ? '<span style="color:#16a34a">已掌握</span>' : '<span style="color:#dc2626">建议学习</span>'} ${item.status === 'todo' ? ` <a href="/learn/${item.code}" class="btn" style="padding:2px 8px;font-size:12px">去学习 →</a>` : ''}`;
+    list.appendChild(li);
+  });
+}
+
+document.getElementById('genPathBtn').addEventListener('click', async () => {
+  const targetCode = document.getElementById('targetCode').value;
+  const masteredCodes = Array.from(document.querySelectorAll('#masteredList input:checked')).map(el => el.value);
+
+  if(!targetCode){ alert('请选择目标知识点'); return; }
+
+  const res = await fetch('/api/path/plan', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({target_code: targetCode, mastered_codes: masteredCodes})
+  });
+  const data = await res.json();
+  if(!data.success){ alert(data.error || '生成失败'); return; }
+  renderPath(data);
+});
+
+// ===== ZOOM & DRAG for topology SVG =====
+const topoContainer = document.getElementById('topoContainer');
+topoContainer.addEventListener('wheel', e => {
+  e.preventDefault();
+  const delta = e.deltaY > 0 ? 1.15 : 0.87;
+  const newScale = Math.min(4, Math.max(0.3, topoScale * delta));
+  const rect = topoContainer.getBoundingClientRect();
+  const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+  topoViewX += mx / topoScale - mx / newScale;
+  topoViewY += my / topoScale - my / newScale;
+  topoScale = newScale;
+  reRenderTopo();
+}, {passive:false});
+
+topoContainer.addEventListener('mousedown', e => {
+  if(e.target.closest('rect')) return;
+  e.preventDefault();
+  topoDragging = true; topoDragSX = e.clientX; topoDragSY = e.clientY;
+  topoDragVX = topoViewX; topoDragVY = topoViewY;
+});
+window.addEventListener('mousemove', e => {
+  if(!topoDragging) return;
+  topoViewX = topoDragVX - (e.clientX - topoDragSX) / topoScale;
+  topoViewY = topoDragVY - (e.clientY - topoDragSY) / topoScale;
+  reRenderTopo();
+});
+window.addEventListener('mouseup', () => { topoDragging = false; });
+
+let lastPathData = null, lastMasteredSet = null;
+function reRenderTopo(){
+  if(lastPathData) renderTopology(lastPathData, lastMasteredSet);
+}
+
+initNodes();
+</script>
+{% endblock %}
