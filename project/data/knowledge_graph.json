@@ -114,14 +114,14 @@
     "name": "快速排序",
     "summary": "分治法选基准并分区递归排序。",
     "difficulty": "medium",
-    "category": "algorithm"
+    "category": "basic"
   },
   {
     "code": "merge-sort",
     "name": "归并排序",
     "summary": "分治法将数组二分后合并有序子数组。",
     "difficulty": "medium",
-    "category": "algorithm"
+    "category": "basic"
   },
   {
     "code": "sorting-comparison",
@@ -143,7 +143,7 @@
     "name": "01背包问题",
     "summary": "经典 DP 问题：在容量限制下选择物品使价值最大。",
     "difficulty": "medium",
-    "category": "algorithm"
+    "category": "dp"
   },
   {
     "code": "dp-vs-greedy",
@@ -165,14 +165,14 @@
     "name": "二叉搜索树操作",
     "summary": "BST 的查找、插入、删除及平衡概念。",
     "difficulty": "medium",
-    "category": "algorithm"
+    "category": "ds"
   },
   {
     "code": "tree-traversal",
     "name": "树的遍历",
     "summary": "前序、中序、后序与层序遍历二叉树。",
     "difficulty": "easy",
-    "category": "algorithm"
+    "category": "ds"
   },
   {
     "code": "enumeration",

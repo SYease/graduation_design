@@ -30,6 +30,11 @@
   .chat-chips { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
   .chat-input-row { display:flex; gap:8px; margin-top:10px; }
   .knowledge-panel { background:#f0f4ff; border:1px solid #bfdbfe; border-radius:8px; padding:12px; }
+
+.viz-status-done{color:#16a34a;font-weight:700;animation:statusPulse .6s ease-in-out 3}
+@keyframes statusPulse{0%,100%{opacity:1}50%{opacity:.4}}
+.dot-anim{animation:dotPulse 1.4s ease-in-out infinite}
+@keyframes dotPulse{0%,20%{opacity:0}50%{opacity:1}80%,100%{opacity:0}}
 </style>
 {% endblock %}
 
@@ -140,6 +145,7 @@
 {% elif content.get('viz_type') == 'tree' %}
   <div class="viz-row">
     <label>操作：</label><select id="preset-select"><option value="insert">插入序列</option><option value="traverse">遍历演示</option></select>
+    <label id="lbl-traverse-order" style="display:none">顺序：</label><select id="traverse-order" style="display:none"><option value="inorder">中序</option><option value="preorder">前序</option><option value="postorder">后序</option></select>
     <label>数据：</label><input id="tree-input" value="50,30,70,20,40,60,80" style="width:200px"/>
     <button class="btn" id="v-load">执行</button><button class="btn secondary" id="v-step">下一步</button><button class="btn secondary" id="v-auto">自动</button><button class="btn secondary" id="v-reset">重置</button>
   </div>
@@ -198,13 +204,11 @@
 
 <!-- ====== REPORT ====== -->
 <div id="m-report" class="card" style="display:none">
-  <h3 class="section-title">学习报告</h3>
-  <div class="viz-row">
-    <button class="btn" id="analyze-btn">生成报告</button>
-    <button class="btn secondary" id="save-profile-btn">保存进度</button>
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:16px">
+    <h3 class="section-title" style="margin:0;border:none;padding:0">学习报告</h3>
+    <div style="display:flex;gap:6px"><button class="btn" id="analyze-btn">生成报告</button><button class="btn secondary" id="reanalyze-btn">重新生成</button><button class="btn secondary" id="save-profile-btn">保存进度</button></div>
   </div>
-  <div id="skill-box" class="card" style="margin-bottom:8px">尚未生成掌握度。</div>
-  <div id="rec-box" class="card">尚未生成推荐。</div>
+  <div id="report-content"><div style="text-align:center;padding:40px;color:#94a3b8">点击生成报告分析掌握度</div></div>
 </div>
 {% endblock %}
 
@@ -231,7 +235,7 @@ const NODE = {{ node | tojson | safe }};
 })();
 
 // ===== SHARED STATE =====
-let profileState = { total_steps_viewed:0, marked_lines:[], completed_runs:0 };
+let profileState = { total_steps_viewed:0, marked_lines:[], completed_runs:0, question_concepts:[], wrong_concepts:[] };
 let animSteps=[], curStep=0, autoTimer=null, vizData={};
 
 function clone(x){ return JSON.parse(JSON.stringify(x)); }
@@ -241,14 +245,43 @@ async function syncProfile(){
   await fetch('/api/profile', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(profileState)});
 }
 
+function formatMarkdown(text){
+  if(!text) return '';
+  let html=text;
+  html=html.replace(/```(\w*)\n([\s\S]*?)```/g,'<pre style="background:#1e293b;color:#e2e8f0;padding:8px 12px;border-radius:6px;overflow-x:auto;font-size:13px;margin:6px 0"><code>$2</code></pre>');
+  html=html.replace(/`([^`]+)`/g,'<code style="background:#e2e8f0;color:#c2410c;padding:1px 4px;border-radius:3px;font-size:13px">$1</code>');
+  html=html.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+  html=html.replace(/\*(.+?)\*/g,'<em>$1</em>');
+  html=html.replace(/### (.+)/g,'<h4 style="margin:8px 0 4px;font-size:15px">$1</h4>');
+  html=html.replace(/## (.+)/g,'<h3 style="margin:10px 0 4px;font-size:16px">$1</h3>');
+  html=html.split(/\n\n+/).map(p=>p.trim()).filter(Boolean).map(p=>{
+    if(/^<(pre|h[1-4]|ul|ol|li)/.test(p)) return p;
+    return '<p style="margin:4px 0">'+p+'</p>';
+  }).join('');
+  html=html.replace(/<\/p>\n?<p[^>]*>/g,'<br>');
+  html=html.replace(/(?:^|\n)- (.+)/g,'<li style="margin:2px 0 2px 16px">$1</li>');
+  html=html.replace(/((?:<li[^>]*>[^<]*<\/li>\n?)+)/g,'<ul style="margin:4px 0;padding:0">$1</ul>');
+  html=html.replace(/(?:^|\n)(\d+)\. (.+)/g,'<li style="margin:2px 0 2px 16px">$2</li>');
+  html=html.replace(/((?:<li[^>]*>[^<]*<\/li>\n?)+)/g,function(m){return m.includes('<ul')?m:'<ol style="margin:4px 0;padding:0">'+m+'</ol>';});
+  return html;
+}
+
 async function sendChat(prefill){
   const input=el('chat-input'); const q=(prefill||input.value||'').trim(); if(!q) return;
   const box=el('chat-messages'); const qd=document.createElement('div');
-  qd.style.cssText='margin:6px 0;text-align:right'; qd.innerHTML=`<span style="background:#2563eb;color:#fff;border-radius:8px;padding:6px 10px;display:inline-block">${q}</span>`;
+  qd.style.cssText='margin:6px 0;text-align:right'; qd.innerHTML=`<span style="background:#2563eb;color:#fff;border-radius:8px;padding:6px 10px;display:inline-block;max-width:80%;word-break:break-word">${q}</span>`;
   box.appendChild(qd); input.value='';
+  const thinking=document.createElement('div');
+  thinking.style.cssText='margin:6px 0';
+  thinking.innerHTML='<span style="background:#e2e8f0;color:#64748b;border-radius:8px;padding:6px 12px;display:inline-block;font-size:13px">思考中<span class="dot-anim">...</span></span>';
+  box.appendChild(thinking); box.scrollTop=box.scrollHeight;
   const res=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q+'（当前学习：'+NODE.name+'）'})});
-  const data=await res.json(); const a=document.createElement('div');
-  a.style.cssText='margin:6px 0'; a.innerHTML=`<span style="background:#e2e8f0;color:#111827;border-radius:8px;padding:6px 10px;display:inline-block">${data.answer||'无响应'} <span class="muted">(${data.provider||'?'})</span></span>`;
+  thinking.remove();
+  const data=await res.json();
+  const ans=formatMarkdown(data.answer||'无响应');
+  const a=document.createElement('div');
+  a.style.cssText='margin:6px 0';
+  a.innerHTML=`<div style="background:#f1f5f9;color:#1e293b;border-radius:8px;padding:8px 12px;display:inline-block;max-width:85%;line-height:1.7;font-size:14px">${ans}<div style="margin-top:4px;font-size:11px;color:#94a3b8;text-align:right">— ${data.provider||'?'}</div></div>`;
   box.appendChild(a); box.scrollTop=box.scrollHeight;
 }
 
@@ -261,7 +294,7 @@ async function loadQuiz(diff){
   if(quizConcepts.length>0) p.push('concept='+encodeURIComponent(quizConcepts[0]));
   if(p.length) url+='?'+p.join('&');
   const res=await fetch(url); const data=await res.json();
-  if(data.success&&data.questions.length){ quizQuestions=data.questions; quizIdx=0; quizCorrect=0; quizTotal=0; renderQuiz(); }
+  if(data.success&&data.questions.length){ quizQuestions=data.questions; quizIdx=0; quizCorrect=0; quizTotal=0; profileState.question_concepts=[]; profileState.wrong_concepts=[]; renderQuiz(); }
   else el('quiz-question').textContent='暂无匹配题目';
 }
 function renderQuiz(){
@@ -272,20 +305,36 @@ function renderQuiz(){
   q.options.forEach((opt,idx)=>{
     const btn=document.createElement('button'); btn.className='btn secondary'; btn.style.cssText='text-align:left;white-space:normal';
     btn.textContent=`${String.fromCharCode(65+idx)}. ${opt}`;
-    btn.onclick=()=>{ quizTotal++; const ok=idx===q.correctIndex; if(ok) quizCorrect++;
+    btn.onclick=()=>{ quizTotal++; const ok=idx===q.correctIndex; if(ok){ quizCorrect++; if(q.concept) profileState.question_concepts.push(q.concept); }else{ if(q.concept) profileState.wrong_concepts.push(q.concept); }
       el('quiz-feedback').innerHTML=ok?`<span style="color:#166534">正确</span>：${q.explanations[idx]}`:`<span style="color:#991b1b">错误</span>：${q.explanations[idx]}`;
       box.querySelectorAll('button').forEach(b=>b.disabled=true); };
     box.appendChild(btn);
   });
 }
 async function generateReport(){
+  const box=el('report-content');
+  box.innerHTML='<div style="text-align:center;padding:20px;color:#64748b">分析中<span class="dot-anim">...</span></div>';
+  const wrongConcepts=[...profileState.wrong_concepts];
+  const correctConcepts=[...profileState.question_concepts];
+  const sessionCorrect=quizCorrect, sessionTotal=quizTotal;
   await syncProfile();
-  const res=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({total_animation_steps:Math.max(animSteps.length,1)})});
+  profileState.question_concepts=[];
+  profileState.wrong_concepts=[];
+  const res=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({total_animation_steps:Math.max(animSteps.length,1),wrong_concepts:wrongConcepts,question_concepts:correctConcepts,current_concept:NODE.code})});
   const data=await res.json();
-  if(data.success){ const items=Object.entries(data.skill_scores||{});
-    el('skill-box').innerHTML=`<h4>掌握度</h4>${items.map(([k,v])=>`${k}: <b>${v}%</b>`).join('<br/>')}<br/>测验正确：<b>${quizCorrect}</b>`; }
-  else el('skill-box').textContent=data.error||'分析失败';
-  el('rec-box').innerHTML=`<h4>推荐建议</h4><ul>${(data.recommendations||[]).map(r=>`<li>${r.knowledge}（${r.score}%）- ${r.advice||''} ${r.next_topic?'→ '+r.next_topic:''}</li>`).join('')||'<li>暂无</li>'}</ul>`;
+  if(data.success){
+    profileState.completed_runs++;
+    fetch('/api/record',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action_type:'generate_report',action_data:{node:NODE.name,topics:Object.keys(data.skill_scores||{}).length}})});
+    const items=Object.entries(data.skill_scores||{});
+    const skillsHtml=items.length>0
+      ?`<table style="width:100%;border-collapse:collapse;margin:8px 0"><tr><th style="text-align:left;padding:6px;border-bottom:1px solid #e5e7eb">知识点</th><th style="text-align:right;padding:6px;border-bottom:1px solid #e5e7eb">掌握度</th></tr>${items.map(([k,v])=>`<tr><td style="padding:6px;border-bottom:1px solid #f1f5f9">${k}</td><td style="padding:6px;text-align:right;border-bottom:1px solid #f1f5f9"><b style="color:${v>=70?'#16a34a':v>=40?'#ca8a04':'#dc2626'}">${v}%</b></td></tr>`).join('')}</table>`
+      :'<p style="color:#94a3b8">暂无掌握度数据，请先完成测验。</p>';
+    const relatedNote=data.related_topic?`<p style="color:#64748b;font-size:12px;margin:4px 0">当前知识点关联：<b>${data.related_topic}</b></p>`:'';
+    box.innerHTML=`<div style="margin-bottom:12px"><h4 style="margin:0 0 8px 0">掌握度报告</h4>${relatedNote}${skillsHtml}<p style="color:#64748b;font-size:13px">本次测验正确：<b>${sessionCorrect}</b> / ${sessionTotal}</p></div>
+      <div><h4 style="margin:0 0 8px 0">推荐建议</h4><ul style="padding-left:20px;line-height:1.8">${(data.recommendations||[]).map(r=>`<li><b>${r.knowledge}</b>（${r.score}%）— ${r.advice||''} ${r.next_topic?'→ <span style="color:#2563eb">'+r.next_topic+'</span>':''}</li>`).join('')||'<li style="color:#94a3b8">暂无推荐</li>'}</ul></div>`;
+  } else {
+    box.innerHTML=`<div style="color:#dc2626;text-align:center;padding:20px">${data.error||'分析失败，请重试'}</div>`;
+  }
 }
 
 // ===== CODE WALKTHROUGH =====
@@ -302,7 +351,8 @@ function renderCodeBox(){
     const line=idx+1; let lc='';
     for(const [t,ls] of Object.entries(CODE_KM)){ if(ls.includes(line)){ lc=t; break; } }
     const row=document.createElement('div'); row.className='line';
-    row.innerHTML=`<span class="line-num">${line}</span>${text||'&nbsp;'}<button data-line="${line}" class="mark-btn">?</button>`;
+    var hl=text||'&nbsp;'; hl=hl.replace(/(\/\/.*)/g,'<span style="color:#6b7280">$1</span>'); hl=hl.replace(/\b(struct|class|void|int|bool|char|float|double|long|auto|const|static|return|if|else|for|while|do|switch|case|break|continue|new|delete|typedef|using|namespace|public|private|protected|template|typename|include|define)\b/g,'<span style="color:#c084fc">$1</span>'); hl=hl.replace(/\b(vector|string|map|set|queue|stack|priority_queue|pair|sort|swap|min|max|push_back|empty|size|begin|end|front|back|top|push|pop|find|insert|erase|INT_MAX|MAXN)\b/g,'<span style="color:#60a5fa">$1</span>'); hl=hl.replace(/\b(true|false|nullptr|NULL)\b/g,'<span style="color:#f97316">$1</span>'); hl=hl.replace(/\b(\d+)\b/g,'<span style="color:#34d399">$1</span>');
+    row.innerHTML=`<span class="line-num">${line}</span>${hl}<button data-line="${line}" class="mark-btn">?</button>`;
     row.onclick=()=>{ el('knowledge-topic').textContent=lc||'未归类'; el('knowledge-text').textContent=conceptExpls[lc]||'点击代码行查看解释'; };
     box.appendChild(row);
   });
@@ -331,7 +381,7 @@ function buildSteps(){
   const parent=Array(n).fill(0).map((_,i)=>i), rnk=Array(n).fill(0);
   function find(x){ while(parent[x]!==x){ parent[x]=parent[parent[x]]; x=parent[x]; } return x; }
   function unite(x,y){ x=find(x); y=find(y); if(x===y) return; if(rnk[x]<rnk[y]) parent[x]=y; else if(rnk[x]>rnk[y]) parent[y]=x; else{ parent[y]=x; rnk[x]++; } }
-  const sorted=vizData.edges.map((e,i)=>({...e,id:'e'+(i+1)})).sort((a,b)=>a.w-b.w);
+  const sorted=vizData.edges.map((e,i)=>({u:e[0],v:e[1],w:e[2],id:'e'+(i+1)})).sort((a,b)=>a.w-b.w);
   let mst=[],rej=[],total=0,proc=0;
   animSteps.push({type:'init',op:'初始化：每个顶点自成一集合',mst:[],rej:[],parent:clone(parent),rnk:clone(rnk),total,proc,edge:null});
   sorted.forEach(edge=>{ proc++;
@@ -350,25 +400,26 @@ function renderViz(){
   const pos={}; const cx=390,cy=170,r=130;
   nodes.forEach((n,i)=>{ const a=-Math.PI/2+i*2*Math.PI/nodes.length; pos[i]={x:cx+r*Math.cos(a),y:cy+r*Math.sin(a)}; });
   const mstSet=new Set(s.mst||[]), rejSet=new Set(s.rej||[]);
-  vizData.edges.forEach((e,i)=>{ const u=pos[e.u],v=pos[e.v]; const eid='e'+(i+1);
+  vizData.edges.forEach((e,i)=>{ const u=pos[e[0]],v=pos[e[1]]; const eid='e'+(i+1);
     const ln=document.createElementNS('http://www.w3.org/2000/svg','line'); ln.setAttribute('x1',u.x); ln.setAttribute('y1',u.y); ln.setAttribute('x2',v.x); ln.setAttribute('y2',v.y);
     ln.setAttribute('stroke',mstSet.has(eid)?'#16a34a':rejSet.has(eid)?'#dc2626':'#94a3b8'); ln.setAttribute('stroke-width',s.edge&&s.edge.id===eid?'3.5':'2');
     if(rejSet.has(eid)) ln.setAttribute('stroke-dasharray','6 4'); svg.appendChild(ln);
-    const tx=document.createElementNS('http://www.w3.org/2000/svg','text'); tx.setAttribute('x',(u.x+v.x)/2); tx.setAttribute('y',(u.y+v.y)/2-6); tx.setAttribute('font-size','12'); tx.setAttribute('text-anchor','middle'); tx.textContent=e.w; svg.appendChild(tx);
+    const tx=document.createElementNS('http://www.w3.org/2000/svg','text'); tx.setAttribute('x',(u.x+v.x)/2); tx.setAttribute('y',(u.y+v.y)/2-6); tx.setAttribute('font-size','12'); tx.setAttribute('text-anchor','middle'); tx.textContent=e[2]; svg.appendChild(tx);
   });
   nodes.forEach((n,i)=>{ const p=pos[i];
     const c=document.createElementNS('http://www.w3.org/2000/svg','circle'); c.setAttribute('cx',p.x); c.setAttribute('cy',p.y); c.setAttribute('r','18'); c.setAttribute('fill','#fff'); c.setAttribute('stroke','#334155'); c.setAttribute('stroke-width','2'); svg.appendChild(c);
     const t=document.createElementNS('http://www.w3.org/2000/svg','text'); t.setAttribute('x',p.x); t.setAttribute('y',p.y+4); t.setAttribute('text-anchor','middle'); t.setAttribute('font-size','12'); t.textContent=n; svg.appendChild(t);
   });
-  el('v-status').textContent=s.op; el('v-accepted').textContent=(s.mst||[]).length; el('v-weight').textContent=s.total||0; el('v-processed').textContent=s.proc||0;
-  el('v-edgelist').innerHTML=vizData.edges.map((e,i)=>`<li>${nodes[e.u]}-${nodes[e.v]}(w=${e.w})</li>`).join('');
+  el('v-status').textContent=s.op;if(s.type==='done'){el('v-status').textContent='演示完成';el('v-status').style.color='#16a34a';el('v-status').style.fontWeight='bold';}else{el('v-status').style.color='';el('v-status').style.fontWeight='';} el('v-accepted').textContent=(s.mst||[]).length; el('v-weight').textContent=s.total||0; el('v-processed').textContent=s.proc||0;
+  el('v-edgelist').innerHTML=vizData.edges.map((e,i)=>`<li>${nodes[e[0]]}-${nodes[e[1]]}(w=${e[2]})</li>`).join('');
   el('v-ufstate').innerHTML=nodes.map((n,i)=>`${n}:${s.parent[i]}`).join(' | ');
   if(curStep>0){ profileState.total_steps_viewed++; if(s.type==='done') profileState.completed_runs++; }
 }
 function loadViz(p){ vizData=PRESETS[p]; buildSteps(); curStep=0; renderViz(); }
 
 {% elif content.get('viz_type') == 'sorting' %}
-const PRESETS={random8:[42,17,63,8,55,31,74,26],random12:[38,15,72,6,51,29,83,11,67,44,92,3],nearly:[3,8,11,15,22,29,31,38,44,51,55,63],reversed:[63,55,51,44,38,31,29,22,15,11,8,3]};
+function genRand(n){var a=[];for(var i=0;i<n;i++)a.push(Math.floor(Math.random()*90)+5);return a;}
+const PRESETS={get random8(){return genRand(8);},get random12(){return genRand(12);},nearly:[3,8,11,15,22,29,31,38,44,51,55,63],reversed:[63,55,51,44,38,31,29,22,15,11,8,3]};
 let compares=0,swaps=0;
 
 function buildSteps(){
@@ -408,7 +459,7 @@ function renderViz(){
     const r=document.createElementNS('http://www.w3.org/2000/svg','rect'); r.setAttribute('x',x); r.setAttribute('y',y); r.setAttribute('width',barW); r.setAttribute('height',h); r.setAttribute('rx','4'); r.setAttribute('fill',fill); svg.appendChild(r);
     const t=document.createElementNS('http://www.w3.org/2000/svg','text'); t.setAttribute('x',x+barW/2); t.setAttribute('y',y-5); t.setAttribute('text-anchor','middle'); t.setAttribute('font-size','11'); t.textContent=v; svg.appendChild(t);
   });
-  el('v-status').textContent=s.op; el('v-compares').textContent=compares; el('v-swaps').textContent=swaps;
+  el('v-status').textContent=s.op;if(s.type==='done'){el('v-status').textContent='演示完成';el('v-status').style.color='#16a34a';el('v-status').style.fontWeight='bold';}else{el('v-status').style.color='';el('v-status').style.fontWeight='';} el('v-compares').textContent=compares; el('v-swaps').textContent=swaps;
 }
 function loadViz(p){ vizData={arr:PRESETS[p]}; buildSteps(); curStep=0; renderViz(); }
 
@@ -427,10 +478,10 @@ function buildSteps(){
       adj[u].forEach(v=>{ if(!visited[v]){ visited[v]=true; q.push(v); } });
     }
   } else {
-    function dfs(u){ visited[u]=true; order.push(u); animSteps.push({type:'visit',op:`访问${vizData.nodes[u]}`,visited:clone(visited),order:clone(order),current:u,queue:[]});
-      adj[u].forEach(v=>{ if(!visited[v]){ dfs(v); } });
+    function dfs(u,parent){ visited[u]=true; order.push(u); animSteps.push({type:'visit',op:`访问${vizData.nodes[u]}`,visited:clone(visited),order:clone(order),current:u,queue:[]});
+      var hc=false;adj[u].forEach(v=>{if(!visited[v]){hc=true;dfs(v,u);}});if(!hc||adj[u].every(function(v){return visited[v];})){animSteps.push({type:'backtrack',op:'回溯到'+vizData.nodes[parent>=0?parent:u],visited:clone(visited),order:clone(order),current:parent>=0?parent:u,queue:[]});}
     }
-    dfs(start);
+    dfs(start,-1);
   }
   animSteps.push({type:'done',op:'遍历完成',visited:clone(visited),order:clone(order),current:-1,queue:[]});
 }
@@ -446,7 +497,7 @@ function renderViz(){
     const c=document.createElementNS('http://www.w3.org/2000/svg','circle'); c.setAttribute('cx',p.x); c.setAttribute('cy',p.y); c.setAttribute('r','20'); c.setAttribute('fill',fill); c.setAttribute('stroke','#334155'); c.setAttribute('stroke-width','2'); svg.appendChild(c);
     const t=document.createElementNS('http://www.w3.org/2000/svg','text'); t.setAttribute('x',p.x); t.setAttribute('y',p.y+5); t.setAttribute('text-anchor','middle'); t.setAttribute('font-size','14'); t.setAttribute('font-weight','bold'); t.textContent=n; svg.appendChild(t);
   });
-  el('v-status').textContent=s.op; el('v-order').textContent=(s.order||[]).map(i=>vizData.nodes[i]).join(' → ');
+  el('v-status').textContent=s.op;if(s.type==='done'){el('v-status').textContent='演示完成';el('v-status').style.color='#16a34a';el('v-status').style.fontWeight='bold';}else{el('v-status').style.color='';el('v-status').style.fontWeight='';} el('v-order').textContent=(s.order||[]).map(i=>vizData.nodes[i]).join(' → ');
 }
 function loadViz(p){ vizData={nodes:PRESETS[p].nodes,edges:PRESETS[p].edges,start:0};
   const sel=el('start-node'); sel.innerHTML=''; vizData.nodes.forEach((n,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent=n; sel.appendChild(o); }); sel.onchange=()=>{vizData.start=parseInt(sel.value);};
@@ -456,28 +507,41 @@ function loadViz(p){ vizData={nodes:PRESETS[p].nodes,edges:PRESETS[p].edges,star
 const PRESETS={basic:{nodes:['A','B','C','D','E'],edges:[[0,1,4],[0,2,2],[1,2,1],[1,3,5],[2,3,8],[2,4,10],[3,4,2]]},complex:{nodes:['A','B','C','D','E','F'],edges:[[0,1,4],[0,2,2],[1,2,1],[1,3,5],[2,3,8],[2,4,10],[3,4,2],[3,5,6],[4,5,3]]}};
 
 function buildSteps(){
-  animSteps=[]; const n=vizData.nodes.length,start=vizData.start||0; const dist=Array(n).fill(Infinity); dist[start]=0; const done=Array(n).fill(false);
-  animSteps.push({type:'init',op:`起点:${vizData.nodes[start]},dist=0`,dist:clone(dist),done:clone(done),current:-1});
+  animSteps=[]; const n=vizData.nodes.length,start=vizData.start||0; const dist=Array(n).fill(Infinity); dist[start]=0; const done=Array(n).fill(false); const parent=Array(n).fill(-1);
+  animSteps.push({type:'init',op:`起点:${vizData.nodes[start]},dist=0`,dist:clone(dist),done:clone(done),current:-1,examEdge:null,relaxed:false,parent:clone(parent)});
   for(let cnt=0;cnt<n;cnt++){ let u=-1,minD=Infinity; for(let i=0;i<n;i++){ if(!done[i]&&dist[i]<minD){ minD=dist[i]; u=i; } } if(u===-1) break; done[u]=true;
-    animSteps.push({type:'select',op:`选最近节点${vizData.nodes[u]}(dist=${dist[u]})`,dist:clone(dist),done:clone(done),current:u});
-    vizData.edges.forEach(([a,b,w])=>{ let v=-1; if(a===u) v=b; else if(b===u) v=a; if(v!==-1&&!done[v]&&dist[u]+w<dist[v]){ dist[v]=dist[u]+w; } });
+    animSteps.push({type:'select',op:`选最近节点${vizData.nodes[u]}(dist=${dist[u]})`,dist:clone(dist),done:clone(done),current:u,examEdge:null,relaxed:false,parent:clone(parent)});
+    vizData.edges.forEach(([a,b,w])=>{ let v=-1; if(a===u) v=b; else if(b===u) v=a; if(v!==-1&&!done[v]){
+      const newDist=dist[u]+w; const better=newDist<dist[v];
+      if(better){ dist[v]=newDist; parent[v]=u; }
+      animSteps.push({type:'examine',op:`松弛${vizData.nodes[u]}→${vizData.nodes[v]}: ${dist[u]}+${w}=${newDist} ${better?'< ✓更新':'≥ ? 不变'}`,dist:clone(dist),done:clone(done),current:u,examEdge:[u,v],relaxed:better,parent:clone(parent)});
+    }});
   }
-  animSteps.push({type:'done',op:'所有可达节点已确定最短距离',dist:clone(dist),done:clone(done),current:-1});
+  animSteps.push({type:'done',op:'所有可达节点已确定最短距离',dist:clone(dist),done:clone(done),current:-1,examEdge:null,relaxed:false,parent:clone(parent)});
+  // Tag final step so renderViz can highlight the shortest-path tree
+  animSteps[animSteps.length-1].finalPaths=true;
 }
 
 function renderViz(){
   const s=animSteps[curStep]; if(!s) return; const svg=el('v-canvas'); svg.innerHTML=''; const nodes=vizData.nodes;
   const pos={}; const cx=390,cy=170,r=130;
   nodes.forEach((n,i)=>{ const a=-Math.PI/2+i*2*Math.PI/nodes.length; pos[i]={x:cx+r*Math.cos(a),y:cy+r*Math.sin(a)}; });
-  vizData.edges.forEach(([u,v,w])=>{ const ln=document.createElementNS('http://www.w3.org/2000/svg','line'); ln.setAttribute('x1',pos[u].x); ln.setAttribute('y1',pos[u].y); ln.setAttribute('x2',pos[v].x); ln.setAttribute('y2',pos[v].y); ln.setAttribute('stroke','#94a3b8'); ln.setAttribute('stroke-width','1.5'); svg.appendChild(ln);
-    const tx=document.createElementNS('http://www.w3.org/2000/svg','text'); tx.setAttribute('x',(pos[u].x+pos[v].x)/2); tx.setAttribute('y',(pos[u].y+pos[v].y)/2-6); tx.setAttribute('font-size','11'); tx.setAttribute('text-anchor','middle'); tx.setAttribute('fill','#64748b'); tx.textContent=w; svg.appendChild(tx);
+  const examKey=s.examEdge?`${s.examEdge[0]},${s.examEdge[1]}`:null;
+  const parent=s.parent||[];
+  vizData.edges.forEach(([u,v,w])=>{ const key=`${u},${v}`,alt=`${v},${u}`; const isExam=examKey===key||examKey===alt;
+    const isPathEdge=s.finalPaths&&(parent[v]===u||parent[u]===v);
+    let stroke='#94a3b8',sw='1.5',fc='#64748b',fw='normal';
+    if(isPathEdge){ stroke='#16a34a'; sw='3.5'; fc='#16a34a'; fw='bold'; }
+    else if(isExam){ stroke=s.relaxed?'#2563eb':'#f97316'; sw='3'; fc=stroke; fw='bold'; }
+    const ln=document.createElementNS('http://www.w3.org/2000/svg','line'); ln.setAttribute('x1',pos[u].x); ln.setAttribute('y1',pos[u].y); ln.setAttribute('x2',pos[v].x); ln.setAttribute('y2',pos[v].y); ln.setAttribute('stroke',stroke); ln.setAttribute('stroke-width',sw); svg.appendChild(ln);
+    const tx=document.createElementNS('http://www.w3.org/2000/svg','text'); tx.setAttribute('x',(pos[u].x+pos[v].x)/2); tx.setAttribute('y',(pos[u].y+pos[v].y)/2-6); tx.setAttribute('font-size','11'); tx.setAttribute('text-anchor','middle'); tx.setAttribute('fill',fc); tx.setAttribute('font-weight',fw); tx.textContent=w; svg.appendChild(tx);
   });
   nodes.forEach((n,i)=>{ const p=pos[i]; let fill='#fff'; if(i===s.current) fill='#fbbf24'; else if(s.done[i]) fill='#bbf7d0';
     const c=document.createElementNS('http://www.w3.org/2000/svg','circle'); c.setAttribute('cx',p.x); c.setAttribute('cy',p.y); c.setAttribute('r','22'); c.setAttribute('fill',fill); c.setAttribute('stroke','#334155'); c.setAttribute('stroke-width','2'); svg.appendChild(c);
     const t=document.createElementNS('http://www.w3.org/2000/svg','text'); t.setAttribute('x',p.x); t.setAttribute('y',p.y-8); t.setAttribute('text-anchor','middle'); t.setAttribute('font-size','11'); t.setAttribute('fill','#1e40af'); t.textContent=n; svg.appendChild(t);
     const dt=document.createElementNS('http://www.w3.org/2000/svg','text'); dt.setAttribute('x',p.x); dt.setAttribute('y',p.y+16); dt.setAttribute('text-anchor','middle'); dt.setAttribute('font-size','9'); dt.setAttribute('fill','#dc2626'); dt.textContent=s.dist[i]===Infinity?'∞':s.dist[i]; svg.appendChild(dt);
   });
-  el('v-status').textContent=s.op; el('v-disttable').innerHTML=nodes.map((n,i)=>`${n}:<b>${s.dist[i]===Infinity?'∞':s.dist[i]}</b>`).join(' | ');
+  el('v-status').textContent=s.op;if(s.type==='done'){el('v-status').textContent='演示完成';el('v-status').style.color='#16a34a';el('v-status').style.fontWeight='bold';}else{el('v-status').style.color='';el('v-status').style.fontWeight='';} el('v-disttable').innerHTML=nodes.map((n,i)=>`${n}:<b>${s.dist[i]===Infinity?'∞':s.dist[i]}</b>`).join(' | ');
   el('v-donelist').textContent=nodes.filter((_,i)=>s.done[i]).join(', ')||'(空)';
 }
 function loadViz(p){ vizData={nodes:PRESETS[p].nodes,edges:PRESETS[p].edges,start:0};
@@ -504,43 +568,76 @@ function renderViz(){
   vizData.edges.forEach(([u,v,w])=>{
     const inMSTEdge=s.inMST&&s.inMST[u]&&s.inMST[v]&&s.parent&&(s.parent[u]===v||s.parent[v]===u);
     const ln=document.createElementNS('http://www.w3.org/2000/svg','line'); ln.setAttribute('x1',pos[u].x); ln.setAttribute('y1',pos[u].y); ln.setAttribute('x2',pos[v].x); ln.setAttribute('y2',pos[v].y); ln.setAttribute('stroke',inMSTEdge?'#16a34a':'#94a3b8'); ln.setAttribute('stroke-width',inMSTEdge?'3':'1.5'); svg.appendChild(ln);
+    const mx=(pos[u].x+pos[v].x)/2,my=(pos[u].y+pos[v].y)/2;
+    const tx=document.createElementNS('http://www.w3.org/2000/svg','text'); tx.setAttribute('x',mx); tx.setAttribute('y',my-4); tx.setAttribute('text-anchor','middle'); tx.setAttribute('font-size','11'); tx.setAttribute('fill',inMSTEdge?'#16a34a':'#64748b'); tx.setAttribute('font-weight',inMSTEdge?'bold':'normal'); tx.textContent=w; svg.appendChild(tx);
   });
   nodes.forEach((n,i)=>{ const p=pos[i];
     const c=document.createElementNS('http://www.w3.org/2000/svg','circle'); c.setAttribute('cx',p.x); c.setAttribute('cy',p.y); c.setAttribute('r','20'); c.setAttribute('fill',s.inMST[i]?'#bbf7d0':i===s.current?'#fbbf24':'#fff'); c.setAttribute('stroke','#334155'); c.setAttribute('stroke-width','2'); svg.appendChild(c);
     const t=document.createElementNS('http://www.w3.org/2000/svg','text'); t.setAttribute('x',p.x); t.setAttribute('y',p.y+5); t.setAttribute('text-anchor','middle'); t.setAttribute('font-size','12'); t.setAttribute('font-weight','bold'); t.textContent=n; svg.appendChild(t);
   });
-  el('v-status').textContent=s.op; el('v-mstweight').textContent=s.mstW||0;
+  el('v-status').textContent=s.op;if(s.type==='done'){el('v-status').textContent='演示完成';el('v-status').style.color='#16a34a';el('v-status').style.fontWeight='bold';}else{el('v-status').style.color='';el('v-status').style.fontWeight='';} el('v-mstweight').textContent=s.mstW||0;
 }
 function loadViz(p){ vizData={nodes:PRESETS[p].nodes,edges:PRESETS[p].edges,start:0};
   const sel=el('start-node'); sel.innerHTML=''; vizData.nodes.forEach((n,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent=n; sel.appendChild(o); }); sel.onchange=()=>{vizData.start=parseInt(sel.value);};
   buildSteps(); curStep=0; renderViz(); }
 
 {% elif content.get('viz_type') == 'tree' %}
-function buildSteps(){
+function buildSteps(mode, order){
   animSteps=[]; const vals=vizData.values; const treeNodes=[],edges=[]; let nextId=0;
-  function addNode(val,parentId){ const id=nextId++; treeNodes.push({id,val,x:0,y:0}); if(parentId!==null) edges.push({from:parentId,to:id}); return id; }
+  function addNode(val,parentId){ const id=nextId++; treeNodes.push({id,val}); if(parentId!==null) edges.push({from:parentId,to:id}); return id; }
   let rootId=null;
   vals.forEach(v=>{
-    if(rootId===null){ rootId=addNode(v,null); animSteps.push({type:'insert',op:`插入根节点${v}`,treeNodes:clone(treeNodes),edges:clone(edges),highlight:rootId}); }
+    if(rootId===null){ rootId=addNode(v,null); if(mode==='insert') animSteps.push({type:'insert',op:`插入根节点${v}`,treeNodes:clone(treeNodes),edges:clone(edges),highlight:rootId}); }
     else { let cur=rootId;
       while(true){
         const curNode=treeNodes.find(tn=>tn.id===cur); if(v<curNode.val){
-          const hasLeft=edges.some(e=>e.from===cur&&treeNodes.find(tn=>tn.id===e.to)?.val<curNode.val);
-          if(!hasLeft){ const nid=addNode(v,cur); animSteps.push({type:'insert',op:`插入${v}为${curNode.val}的左子`,treeNodes:clone(treeNodes),edges:clone(edges),highlight:nid}); break; }
-          else { cur=edges.find(e=>e.from===cur&&treeNodes.find(tn=>tn.id===e.to)?.val<curNode.val).to; }
+          const leftEdge=edges.find(e=>e.from===cur&&treeNodes.find(tn=>tn.id===e.to)?.val<curNode.val);
+          if(!leftEdge){ const nid=addNode(v,cur); if(mode==='insert') animSteps.push({type:'insert',op:`插入${v}为${curNode.val}的左子`,treeNodes:clone(treeNodes),edges:clone(edges),highlight:nid}); break; }
+          else { cur=leftEdge.to; }
         } else {
-          const hasRight=edges.some(e=>e.from===cur&&treeNodes.find(tn=>tn.id===e.to)?.val>curNode.val);
-          if(!hasRight){ const nid=addNode(v,cur); animSteps.push({type:'insert',op:`插入${v}为${curNode.val}的右子`,treeNodes:clone(treeNodes),edges:clone(edges),highlight:nid}); break; }
-          else { cur=edges.find(e=>e.from===cur&&treeNodes.find(tn=>tn.id===e.to)?.val>curNode.val).to; }
+          const rightEdge=edges.find(e=>e.from===cur&&treeNodes.find(tn=>tn.id===e.to)?.val>curNode.val);
+          if(!rightEdge){ const nid=addNode(v,cur); if(mode==='insert') animSteps.push({type:'insert',op:`插入${v}为${curNode.val}的右子`,treeNodes:clone(treeNodes),edges:clone(edges),highlight:nid}); break; }
+          else { cur=rightEdge.to; }
         }
       }
     }
   });
+  if(mode==='insert'){
+    animSteps.push({type:'done',op:'BST构建完成',treeNodes:clone(treeNodes),edges:clone(edges),highlight:-1});
+  } else if(mode==='traverse' && treeNodes.length>0){
+    const visited=[],tn=treeNodes,ed=edges;
+    function traverse(nodeId){
+      const node=tn.find(n=>n.id===nodeId); if(!node) return;
+      const children=ed.filter(e=>e.from===nodeId).map(e=>tn.find(n=>n.id===e.to)).filter(Boolean);
+      children.sort((a,b)=>a.val-b.val);
+      const leftChild=children.find(c=>c.val<node.val);
+      const rightChild=children.find(c=>c.val>node.val);
+      if(order==='preorder'){
+        visited.push(nodeId);
+        animSteps.push({type:'traverse',op:`前序访问: ${node.val}`,treeNodes:clone(tn),edges:clone(ed),highlight:nodeId,visited:[...visited],order});
+        if(leftChild) traverse(leftChild.id);
+        if(rightChild) traverse(rightChild.id);
+      } else if(order==='inorder'){
+        if(leftChild) traverse(leftChild.id);
+        visited.push(nodeId);
+        animSteps.push({type:'traverse',op:`中序访问: ${node.val}`,treeNodes:clone(tn),edges:clone(ed),highlight:nodeId,visited:[...visited],order});
+        if(rightChild) traverse(rightChild.id);
+      } else {
+        if(leftChild) traverse(leftChild.id);
+        if(rightChild) traverse(rightChild.id);
+        visited.push(nodeId);
+        animSteps.push({type:'traverse',op:`后序访问: ${node.val}`,treeNodes:clone(tn),edges:clone(ed),highlight:nodeId,visited:[...visited],order});
+      }
+    }
+    traverse(treeNodes[0].id);
+    const label=order==='preorder'?'前序':order==='inorder'?'中序':'后序';
+    animSteps.push({type:'done',op:label+'遍历完成',treeNodes:clone(tn),edges:clone(ed),highlight:-1,visited:[...visited],order});
+  }
 }
 
 function layoutTree(tn,ed){ const pos={},adj={},depths={}; tn.forEach(n=>{adj[n.id]=[];}); ed.forEach(e=>{adj[e.from].push(e.to);});
-  const root=tn.find(n=>n.parent===undefined); if(!root&&tn.length===0) return pos; const r=root||tn[0];
-  const q=[{id:r.id,depth:0}]; while(q.length>0){ const{id,depth}=q.shift(); if(!depths[depth]) depths[depth]=[]; depths[depth].push(id); adj[id].forEach(cid=>q.push({id:cid,depth:depth+1})); }
+  const root=tn[0]; if(!root||tn.length===0) return pos;
+  const q=[{id:root.id,depth:0}]; while(q.length>0){ const{id,depth}=q.shift(); if(!depths[depth]) depths[depth]=[]; depths[depth].push(id); adj[id].forEach(cid=>q.push({id:cid,depth:depth+1})); }
   const maxD=Math.max(...Object.keys(depths).map(Number),0); const xStep=700/(maxD+1);
   Object.entries(depths).forEach(([depth,ids])=>{ ids.forEach((id,i)=>{ pos[id]={x:60+parseInt(depth)*xStep,y:50+i*60}; }); });
   return pos;
@@ -552,15 +649,26 @@ function renderViz(){
   ed.forEach(e=>{ const f=pos[e.from],t=pos[e.to]; if(!f||!t) return;
     const ln=document.createElementNS('http://www.w3.org/2000/svg','line'); ln.setAttribute('x1',f.x); ln.setAttribute('y1',f.y); ln.setAttribute('x2',t.x); ln.setAttribute('y2',t.y); ln.setAttribute('stroke','#94a3b8'); ln.setAttribute('stroke-width','2'); svg.appendChild(ln);
   });
-  tn.forEach(n=>{ const p=pos[n.id]; if(!p) return; const hl=s.highlight===n.id;
-    const c=document.createElementNS('http://www.w3.org/2000/svg','circle'); c.setAttribute('cx',p.x); c.setAttribute('cy',p.y); c.setAttribute('r','18'); c.setAttribute('fill',hl?'#fbbf24':'#dbeafe'); c.setAttribute('stroke',hl?'#2563eb':'#475569'); c.setAttribute('stroke-width',hl?'3':'1.5'); svg.appendChild(c);
+  const visitedSet=new Set(s.visited||[]);
+  tn.forEach(n=>{ const p=pos[n.id]; if(!p) return; const hl=s.highlight===n.id; const done=visitedSet.has(n.id);
+    let fill='#dbeafe', stroke='#475569', sw='1.5';
+    if(hl){ fill='#fbbf24'; stroke='#2563eb'; sw='3'; }
+    else if(done){ fill='#bbf7d0'; stroke='#16a34a'; sw='2'; }
+    const c=document.createElementNS('http://www.w3.org/2000/svg','circle'); c.setAttribute('cx',p.x); c.setAttribute('cy',p.y); c.setAttribute('r','18'); c.setAttribute('fill',fill); c.setAttribute('stroke',stroke); c.setAttribute('stroke-width',sw); svg.appendChild(c);
     const t=document.createElementNS('http://www.w3.org/2000/svg','text'); t.setAttribute('x',p.x); t.setAttribute('y',p.y+4); t.setAttribute('text-anchor','middle'); t.setAttribute('font-size','11'); t.setAttribute('font-weight','bold'); t.textContent=n.val; svg.appendChild(t);
+    if(done && s.visited){
+      const idx=s.visited.indexOf(n.id); if(idx>=0){
+        const ord=document.createElementNS('http://www.w3.org/2000/svg','text'); ord.setAttribute('x',p.x+14); ord.setAttribute('y',p.y-14); ord.setAttribute('text-anchor','middle'); ord.setAttribute('font-size','9'); ord.setAttribute('fill','#16a34a'); ord.setAttribute('font-weight','bold'); ord.textContent=idx+1; svg.appendChild(ord);
+      }
+    }
   });
-  el('v-status').textContent=s.op;
+  el('v-status').textContent=s.op;if(s.type==='done'){el('v-status').textContent='演示完成';el('v-status').style.color='#16a34a';el('v-status').style.fontWeight='bold';}else{el('v-status').style.color='';el('v-status').style.fontWeight='';}
 }
-function loadViz(p){
+function loadViz(){
+  const mode=el('preset-select').value;
+  const order=el('traverse-order').value;
   const valStr=el('tree-input').value||'50,30,70,20,40,60,80'; vizData={values:valStr.split(',').map(s=>parseInt(s.trim())).filter(n=>!isNaN(n))};
-  buildSteps(); curStep=0; renderViz();
+  buildSteps(mode, order); curStep=0; renderViz();
 }
 
 {% elif content.get('viz_type') == 'dp-table' %}
@@ -588,7 +696,7 @@ function renderViz(){
   }}
   for(let w=0;w<=W;w++){ const t=document.createElementNS('http://www.w3.org/2000/svg','text'); t.setAttribute('x',mx+w*cw+cw/2); t.setAttribute('y',my-8); t.setAttribute('text-anchor','middle'); t.setAttribute('font-size','10'); t.setAttribute('fill','#64748b'); t.textContent=`w=${w}`; svg.appendChild(t); }
   for(let i=0;i<=n;i++){ const t=document.createElementNS('http://www.w3.org/2000/svg','text'); t.setAttribute('x',mx-10); t.setAttribute('y',my+i*ch+ch/2+4); t.setAttribute('text-anchor','end'); t.setAttribute('font-size','10'); t.setAttribute('fill','#64748b'); t.textContent=`i=${i}`; svg.appendChild(t); }
-  el('v-status').textContent=s.op; el('v-cell').textContent=s.i>0&&s.w>=0?`dp[${s.i}][${s.w}]`:'--';
+  el('v-status').textContent=s.op;if(s.type==='done'){el('v-status').textContent='演示完成';el('v-status').style.color='#16a34a';el('v-status').style.fontWeight='bold';}else{el('v-status').style.color='';el('v-status').style.fontWeight='';} el('v-cell').textContent=s.i>0&&s.w>=0?`dp[${s.i}][${s.w}]`:'--';
   el('v-dpinfo').innerHTML=`<b>物品:</b> ${vizData.wt.map((w,i)=>`物品${i+1}:wt=${w},val=${vizData.val[i]}`).join(' | ')}`;
 }
 function loadViz(p){ vizData=PRESETS[p]; buildSteps(); curStep=0; renderViz(); }
@@ -597,12 +705,26 @@ function loadViz(p){ vizData=PRESETS[p]; buildSteps(); curStep=0; renderViz(); }
 function bindVizCtrls(){
   const btns={load:'v-load',start:'v-start',step:'v-step',auto:'v-auto',pause:'v-pause',reset:'v-reset'};
   const lb=el(btns.load), sb=el(btns.start), stb=el(btns.step), ab=el(btns.auto), pb=el(btns.pause), rb=el(btns.reset);
-  if(lb) lb.onclick=()=>loadViz(el('preset-select').value);
-  if(sb) sb.onclick=()=>{curStep=0;renderViz();};
+  if(lb) lb.onclick=()=>{ const ps=el('preset-select'); loadViz(ps?ps.value:undefined); };
+  if(sb) sb.onclick=()=>{curStep=0;el('v-status').className='';el('v-status').textContent='▶ 开始';setTimeout(()=>{el('v-status').className='';renderViz();},150);};
   if(stb) stb.onclick=nextStep;
   if(ab) ab.onclick=startAuto;
   if(pb) pb.onclick=pauseAuto;
-  if(rb) rb.onclick=()=>{pauseAuto();curStep=0;renderViz();};
+  if(rb) rb.onclick=()=>{pauseAuto();curStep=0;el('v-status').className='';el('v-status').textContent='准备就绪';renderViz();};
+  // Tree viz special: mode switch + default mode
+  if(el('traverse-order')){
+    const modeSel=el('preset-select');
+    const showTraverseOpts=()=>{
+      const m=modeSel.value;
+      el('traverse-order').style.display=m==='traverse'?'inline-block':'none';
+      const lbl=document.getElementById('lbl-traverse-order');
+      if(lbl) lbl.style.display=m==='traverse'?'inline':'none';
+    };
+    modeSel.addEventListener('change', showTraverseOpts);
+    // Set default mode based on page
+    if(NODE.code==='tree-traversal'){ modeSel.value='traverse'; }
+    showTraverseOpts();
+  }
 }
 {% endif %}
 
@@ -619,9 +741,28 @@ function bindAll(){
   };
   {% endif %}
   el('generate-quiz-btn').onclick=()=>{const d=el('quiz-difficulty-filter').value;loadQuiz(d||undefined);};
-  el('next-quiz-btn').onclick=()=>{if(quizQuestions.length===0)loadQuiz();else{quizIdx=(quizIdx+1)%quizQuestions.length;renderQuiz();}};
+  el('next-quiz-btn').onclick=()=>{
+    if(quizQuestions.length===0){loadQuiz();return;}
+    if(quizIdx>=quizQuestions.length-1){
+      el('quiz-question').textContent='测验完成！';
+      el('quiz-options').innerHTML=`<div style="text-align:center;padding:20px;color:#16a34a">共 ${quizTotal} 题，正确 ${quizCorrect} 题</div>`;
+      el('quiz-feedback').textContent='';
+      profileState.completed_runs++;
+      fetch('/api/record',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action_type:'complete_quiz',action_data:{node:NODE.name,correct:quizCorrect,total:quizTotal}})});
+      return;
+    }
+    quizIdx++; renderQuiz();
+  };
   el('analyze-btn').onclick=generateReport;
-  el('save-profile-btn').onclick=async()=>{await syncProfile();el('skill-box').innerHTML='<span style="color:#16a34a">学习进度已保存。</span>';};
+  el('reanalyze-btn').onclick=generateReport;
+  el('save-profile-btn').onclick=async()=>{
+    await syncProfile();
+    profileState.question_concepts=[];
+    profileState.wrong_concepts=[];
+    const box=el('report-content');
+    box.innerHTML='<div style="text-align:center;padding:20px;color:#16a34a">学习进度已保存。</div>';
+    setTimeout(()=>{if(box.textContent==='学习进度已保存。')box.innerHTML='<div style="text-align:center;padding:40px;color:#94a3b8">点击生成报告分析掌握度</div>';},3000);
+  };
 }
 
 // ===== INIT =====

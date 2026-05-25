@@ -7,7 +7,10 @@
   .graph-wrap { position:relative; width:100%; height:100%; background:#f8fbff; overflow:hidden; }
   .search-overlay { position:absolute; top:12px; left:12px; z-index:10; width:300px; }
   .search-overlay .mini-card { background:rgba(255,255,255,.94); backdrop-filter:blur(8px); border:1px solid #dbe4f3; border-radius:10px; padding:10px 12px; box-shadow:0 4px 16px rgba(15,23,42,.08); font-size:13px; position:relative; }
-  .cat-tabs { position:absolute; top:12px; left:50%; transform:translateX(-50%); z-index:10; display:flex; gap:4px; background:rgba(255,255,255,.94); backdrop-filter:blur(8px); border:1px solid #dbe4f3; border-radius:10px; padding:5px; box-shadow:0 4px 16px rgba(15,23,42,.08); }
+  .cat-tabs { position:absolute; top:12px; left:50%; transform:translateX(-50%); z-index:10; display:flex; gap:4px; background:rgba(255,255,255,.94); backdrop-filter:blur(8px); border:1px solid #dbe4f3; border-radius:10px; padding:5px; box-shadow:0 4px 16px rgba(15,23,42,.08); transition:all .25s; }
+  .cat-tabs.collapsed { opacity:0; pointer-events:none; transform:translateX(-50%) translateY(-8px); }
+  .cat-toggle { position:absolute; top:50px; left:50%; transform:translateX(-50%); z-index:11; padding:5px 14px; border-radius:8px; font-size:12px; cursor:pointer; border:none; background:rgba(255,255,255,.94); backdrop-filter:blur(8px); color:#64748b; font-weight:500; box-shadow:0 2px 8px rgba(15,23,42,.08); border:1px solid #dbe4f3; white-space:nowrap; transition:all .15s; }
+  .cat-toggle:hover { background:#f1f5f9; color:#1e293b; }
   .cat-tab { padding:5px 12px; border-radius:7px; font-size:12px; cursor:pointer; border:none; background:transparent; color:#475569; font-weight:500; white-space:nowrap; transition:all .15s; }
   .cat-tab:hover { background:#f1f5f9; color:#1e293b; }
   .cat-tab.active { background:#2563eb; color:#fff; }
@@ -35,6 +38,7 @@
   </div>
   <!-- Category tabs: top center -->
   <div class="cat-tabs" id="catTabs"></div>
+  <button class="cat-toggle" id="catToggle" title="展开分类筛选">分类筛选 ▾</button>
   <!-- Title: top-right -->
   <div class="hero-badge" id="catLabel">全部 94</div>
   <!-- Filter: bottom center -->
@@ -96,8 +100,25 @@ function switchCategory(cat){
   document.getElementById('catLabel').textContent = CAT_LABELS[cat] + ' ' +
     graphData.nodes.filter(n => (activeCategory==='all'||getCat(n)===cat||(cat==='graph'&&getCat(n)==='algorithm'))).length;
   buildCatTabs();
+  if(!catExpanded){ document.getElementById('catToggle').textContent = `分类筛选 ▾ (${CAT_LABELS[cat]||cat})`; }
   renderGraph();
 }
+
+let catExpanded = true;
+document.getElementById('catToggle').addEventListener('click', () => {
+  catExpanded = !catExpanded;
+  const tabs = document.getElementById('catTabs');
+  const btn = document.getElementById('catToggle');
+  if(catExpanded){
+    tabs.classList.remove('collapsed');
+    btn.textContent = '收起分类 ▴';
+    btn.style.top = '50px';
+  } else {
+    tabs.classList.add('collapsed');
+    btn.textContent = `分类筛选 ▾ (${CAT_LABELS[activeCategory]||activeCategory})`;
+    btn.style.top = '12px';
+  }
+});
 
 function difficultyClass(d){
   if(d === 'easy') return 'easy';
@@ -110,94 +131,76 @@ function getEnabledDifficulties(){
 }
 
 function createTopoLayout(nodes, edges){
-  const SUB_COL_W = 170, ROW_H = 44, MX = 50, MY = 50;
+  // Pure DAG topological depth layout (like DAG Viewer)
+  // All nodes are assigned a depth level based on prerequisites
+  const COL_W = 170, ROW_H = 56, MX = 70, MY = 60;
 
-  const diffCols = [
-    {key:'easy', name:'简单', nodes:[], color:'#16a34a', bg:'#dcfce7'},
-    {key:'medium', name:'中等', nodes:[], color:'#ca8a04', bg:'#fef3c7'},
-    {key:'hard', name:'困难', nodes:[], color:'#dc2626', bg:'#fee2e2'}
-  ];
-
-  // Group by difficulty
   const nodeById = {}; nodes.forEach(n => { nodeById[n.id] = n; });
-  nodes.forEach(n => {
-    const col = diffCols.find(c => c.key === n.difficulty) || diffCols[1];
-    col.nodes.push(n);
-  });
+  const nodeCodes = new Set(nodes.map(n => n.code));
 
-  // Within each difficulty column, assign sub-levels via topological sort
-  // Only consider edges where BOTH endpoints are in the SAME difficulty column
-  let totalSubCols = 0;
-  diffCols.forEach(col => {
-    const colCodes = new Set(col.nodes.map(n => n.code));
-    const adj = {}, indeg = {};
-    col.nodes.forEach(n => { adj[n.code] = []; indeg[n.code] = 0; });
-    edges.forEach(e => {
-      const sn = nodeById[e.source_node_id];
-      const tn = nodeById[e.target_node_id];
-      if(sn && tn && colCodes.has(sn.code) && colCodes.has(tn.code)){
-        adj[sn.code].push(tn.code); indeg[tn.code]++;
-      }
-    });
-    // Kahn assign sub-levels
-    const subLevel = {}, q = [];
-    col.nodes.forEach(n => { if(indeg[n.code] === 0){ subLevel[n.code] = 0; q.push(n.code); } });
-    if(q.length === 0 && col.nodes.length > 0){ subLevel[col.nodes[0].code] = 0; q.push(col.nodes[0].code); }
-    while(q.length > 0){
-      const c = q.shift();
-      (adj[c]||[]).forEach(next => {
-        const cand = subLevel[c] + 1;
-        if(!(next in subLevel) || subLevel[next] < cand) subLevel[next] = cand;
-        indeg[next]--; if(indeg[next] === 0) q.push(next);
-      });
+  // Build adjacency and indegree from ALL edges between visible nodes
+  const adj = {}, indeg = {};
+  nodes.forEach(n => { adj[n.code] = []; indeg[n.code] = 0; });
+  edges.forEach(e => {
+    const sn = nodeById[e.source_node_id];
+    const tn = nodeById[e.target_node_id];
+    if(sn && tn && nodeCodes.has(sn.code) && nodeCodes.has(tn.code)){
+      adj[sn.code].push(tn.code); indeg[tn.code]++;
     }
-    const maxLvl = Object.keys(subLevel).length ? Math.max(...Object.values(subLevel)) : 0;
-    col.nodes.forEach(n => { if(!(n.code in subLevel)) subLevel[n.code] = maxLvl + 1; });
-
-    // Store sub-level count for this column
-    col.subLevels = Math.max(...Object.values(subLevel), 0) + 1;
-    col.nodes.forEach(n => { n._subLvl = subLevel[n.code]; });
-    totalSubCols += col.subLevels;
   });
 
-  // Layout: each difficulty column is subColX wide, containing subLevels sub-columns
-  let cursorX = MX;
-  const activeCols = diffCols.filter(c => c.nodes.length > 0);
-  activeCols.forEach(col => {
-    col.startX = cursorX;
-    col.width = col.subLevels * SUB_COL_W;
-    cursorX += col.width + 30; // gap between difficulty columns
-  });
-  svgW = cursorX - 30 + MX;
+  // Kahn topological sort to assign depth levels
+  const depth = {}, q = [];
+  nodes.forEach(n => { if(indeg[n.code] === 0){ depth[n.code] = 0; q.push(n.code); } });
+  if(q.length === 0 && nodes.length > 0){ depth[nodes[0].code] = 0; q.push(nodes[0].code); }
+  while(q.length > 0){
+    const c = q.shift(); const cur = depth[c];
+    (adj[c]||[]).forEach(next => {
+      const cand = cur + 1;
+      if(!(next in depth) || depth[next] < cand) depth[next] = cand;
+      indeg[next]--; if(indeg[next] === 0) q.push(next);
+    });
+  }
+  const maxDepth = Object.keys(depth).length ? Math.max(...Object.values(depth)) : 0;
+  nodes.forEach(n => { if(!(n.code in depth)) depth[n.code] = maxDepth + 1; });
 
-  const maxPer = Math.max(...activeCols.map(c => {
-    // Count max nodes per sub-level
-    const counts = {};
-    c.nodes.forEach(n => { const sl = n._subLvl; counts[sl] = (counts[sl]||0) + 1; });
-    return Math.max(...Object.values(counts), 1);
-  }), 1);
+  // Group nodes by depth level → each level is a column
+  const groups = {};
+  nodes.forEach(n => {
+    const d = depth[n.code];
+    if(!groups[d]) groups[d] = [];
+    groups[d].push(n);
+  });
+
+  // Sort within each depth: easy first, then medium, then hard, then by name
+  const diffOrder = {easy:0, medium:1, hard:2};
+  Object.values(groups).forEach(g => {
+    g.sort((a,b) => (diffOrder[a.difficulty]||1) - (diffOrder[b.difficulty]||1) || a.name.localeCompare(b.name));
+  });
+
+  const levels = Object.keys(groups).map(Number).sort((a,b) => a-b);
+  const maxPer = Math.max(...levels.map(l => groups[l].length), 1);
+  const activeCols = levels.map((lvl, i) => ({
+    key: `depth-${lvl}`,
+    name: `第${lvl+1}层`,
+    nodes: groups[lvl],
+    color: '#94a3b8',
+    bg: (lvl % 2 === 0) ? '#f8fafc' : '#f1f5f9',
+    depthIdx: i
+  }));
+
   svgH = Math.max(maxPer * ROW_H + MY * 2, 400);
+  svgW = levels.length * COL_W + MX * 2;
 
   const map = {};
-  activeCols.forEach((col, ci) => {
-    // Count nodes per sub-level
-    const subCounts = {};
-    col.nodes.forEach(n => { const sl = n._subLvl; subCounts[sl] = (subCounts[sl]||0) + 1; });
-
-    col.nodes.forEach(n => {
-      const sl = n._subLvl;
-      // Which row within this sub-level?
-      const sameSubNodes = col.nodes.filter(x => x._subLvl === sl).sort((a,b) => a.name.localeCompare(b.name));
-      const rowIdx = sameSubNodes.indexOf(n);
-      const totalInSub = sameSubNodes.length;
-      const th = totalInSub * ROW_H;
-      const sy = (svgH - th) / 2;
-      const x = col.startX + sl * SUB_COL_W;
-      const y = sy + rowIdx * ROW_H + ROW_H/2;
-      map[n.code] = {x, y, colIdx: ci, subLvl: sl, colName: col.name, colColor: col.color};
+  levels.forEach((lvl, li) => {
+    const gn = groups[lvl]; const x = MX + li * COL_W;
+    const th = gn.length * ROW_H; const sy = (svgH - th) / 2;
+    gn.forEach((n, i) => {
+      map[n.code] = {x, y: sy + i * ROW_H + ROW_H/2, colIdx: li, depth: lvl, difficulty: n.difficulty};
     });
   });
-  return {map, activeCols};
+  window._lastNodeMap = map; return {map, activeCols};
 }
 
 function renderGraph(){
@@ -247,40 +250,44 @@ function renderGraph(){
   const ap = document.createElementNS('http://www.w3.org/2000/svg','polygon'); ap.setAttribute('points','0 0, 8 3, 0 6'); ap.setAttribute('fill','#94a3b8');
   marker.appendChild(ap); defs.appendChild(marker); svg.appendChild(defs);
 
-  // Column headers — span the difficulty column
+  // Column headers — depth levels
+  const diffColors = {easy:'#16a34a', medium:'#ca8a04', hard:'#dc2626'};
   activeCols.forEach(col => {
-    const cx = col.startX + col.width / 2;
+    const cx = col.nodes[0] ? map[col.nodes[0].code].x + NW/2 : 0;
     const bg = document.createElementNS('http://www.w3.org/2000/svg','rect');
-    bg.setAttribute('x', col.startX + 4); bg.setAttribute('y', 8); bg.setAttribute('width', col.width - 8); bg.setAttribute('height', 22); bg.setAttribute('rx', '11');
-    bg.setAttribute('fill', col.bg); bg.setAttribute('stroke', col.color); bg.setAttribute('stroke-width', '1.5');
+    bg.setAttribute('x', cx - 26); bg.setAttribute('y', 8); bg.setAttribute('width', 52); bg.setAttribute('height', 20); bg.setAttribute('rx', '10');
+    bg.setAttribute('fill', col.bg); bg.setAttribute('stroke', '#cbd5e1'); bg.setAttribute('stroke-width', '1');
     svg.appendChild(bg);
     const label = document.createElementNS('http://www.w3.org/2000/svg','text');
-    label.setAttribute('x', cx); label.setAttribute('y', 23); label.setAttribute('text-anchor','middle');
-    label.setAttribute('font-size', '12'); label.setAttribute('font-weight', 'bold'); label.setAttribute('fill', col.color);
-    label.textContent = col.name + ' (' + col.nodes.length + ')'; svg.appendChild(label);
+    label.setAttribute('x', cx); label.setAttribute('y', 22); label.setAttribute('text-anchor','middle');
+    label.setAttribute('font-size', '10'); label.setAttribute('font-weight', 'bold'); label.setAttribute('fill', '#64748b');
+    label.textContent = col.name; svg.appendChild(label);
   });
 
-  // Edges — same-difficulty edges are inside sub-columns, cross-difficulty span columns
+  // Edges — color by source difficulty, curve for adjacent columns
   filteredEdges.forEach(e => {
     const sn = graphData.nodes.find(n => n.id === e.source_node_id);
     const tn = graphData.nodes.find(n => n.id === e.target_node_id);
     if(!sn || !tn) return;
     const s = map[sn.code], t = map[tn.code]; if(!s || !t) return;
+    const edgeColor = diffColors[sn.difficulty] || '#94a3b8';
+    const gap = t.colIdx - s.colIdx;
 
-    if(s.colIdx === t.colIdx){
-      // Same difficulty: straight line between sub-columns, slightly curved
+    if(gap <= 1){
+      // Adjacent or same column: slightly curved
       const midX = (s.x + t.x) / 2 + NW/2;
       const path = document.createElementNS('http://www.w3.org/2000/svg','path');
       path.setAttribute('d', `M${s.x + NW} ${s.y} Q${midX} ${(s.y+t.y)/2} ${t.x - 4} ${t.y}`);
-      path.setAttribute('fill','none'); path.setAttribute('stroke', s.colColor); path.setAttribute('stroke-width','1.8');
-      path.setAttribute('stroke-dasharray','4 3'); path.setAttribute('marker-end','url(#arrow)'); path.setAttribute('opacity','0.6');
+      path.setAttribute('fill','none'); path.setAttribute('stroke', edgeColor); path.setAttribute('stroke-width','1.8');
+      path.setAttribute('stroke-dasharray', gap===0 ? '4 3' : 'none');
+      path.setAttribute('marker-end','url(#arrow)'); path.setAttribute('opacity','0.55');
       svg.appendChild(path);
     } else {
-      // Cross difficulty: solid straight line
+      // Skip columns: straight line across
       const line = document.createElementNS('http://www.w3.org/2000/svg','line');
       line.setAttribute('x1', s.x + NW); line.setAttribute('y1', s.y);
       line.setAttribute('x2', t.x - 4); line.setAttribute('y2', t.y);
-      line.setAttribute('stroke', s.colColor); line.setAttribute('stroke-width','2.2'); line.setAttribute('marker-end','url(#arrow)'); line.setAttribute('opacity','0.5');
+      line.setAttribute('stroke', edgeColor); line.setAttribute('stroke-width','2'); line.setAttribute('marker-end','url(#arrow)'); line.setAttribute('opacity','0.45');
       svg.appendChild(line);
     }
   });
@@ -303,7 +310,7 @@ function renderGraph(){
     t.setAttribute('x', p.x + NW/2); t.setAttribute('y', p.y + 5); t.setAttribute('text-anchor', 'middle'); t.setAttribute('font-size', '13'); t.setAttribute('font-weight', 'bold'); t.setAttribute('fill', '#1e293b'); t.textContent = n.name; g.appendChild(t);
 
     g.addEventListener('mouseenter', () => {
-      tooltip.innerHTML = `<b style="font-size:14px">${n.name}</b> <span class="badge ${difficultyClass(n.difficulty)}">${n.difficulty}</span><br/><span class="muted">${n.summary || '暂无摘要'}</span><br/><span style="font-size:12px">分类: ${CAT_LABELS[getCat(n)]||getCat(n)} | 前置: ${prereqCount[n.code]||0} | 后继: ${succCount[n.code]||0}</span><br/><span style="font-size:11px;color:#3b82f6">点击进入学习页</span>`;
+      tooltip.innerHTML = `<b style="font-size:14px">${n.name}</b> <span class="badge ${difficultyClass(n.difficulty)}">${n.difficulty}</span><br/><span class="muted">${n.summary || '暂无摘要'}</span><br/><span style="font-size:12px">分类: ${CAT_LABELS[getCat(n)]||getCat(n)} | 深度: 第${(p.depth||0)+1}层 | 前置: ${prereqCount[n.code]||0} | 后继: ${succCount[n.code]||0}</span><br/><span style="font-size:11px;color:#3b82f6">点击进入学习页</span>`;
       tooltip.style.display = 'block';
     });
     g.addEventListener('mousemove', evt => {
@@ -353,7 +360,7 @@ function renderSuggestions(items){
     div.innerHTML = `<b>${item.name}</b> <span class="badge ${difficultyClass(item.difficulty)}">${item.difficulty}</span><div class="muted">${item.summary || ''}</div>`;
     const row = document.createElement('div'); row.style.marginTop = '6px'; row.style.display = 'flex'; row.style.gap = '6px';
     const lb = document.createElement('button'); lb.className = 'btn secondary'; lb.style.cssText = 'padding:4px 8px;font-size:12px'; lb.textContent = '图上定位';
-    lb.onclick = () => { highlightedCode = item.code; renderGraph(); };
+    lb.onclick = () => { highlightedCode = item.code; var nm = window._lastNodeMap; if(nm && nm[item.code]){ viewX = Math.max(0, nm[item.code].x - 350); viewY = Math.max(0, nm[item.code].y - 200); } renderGraph(); };
     const lrb = document.createElement('button'); lrb.className = 'btn'; lrb.style.cssText = 'padding:4px 8px;font-size:12px'; lrb.textContent = '进入学习';
     lrb.onclick = () => window.location.href = item.action_learn.url;
     row.appendChild(lb); row.appendChild(lrb); div.appendChild(row); box.appendChild(div);

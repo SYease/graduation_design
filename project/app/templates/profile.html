@@ -57,14 +57,6 @@
 <script>
 let kgNodes = [], kgEdges = [];
 
-const topicToCode = {
-  '最小生成树目标':'mst-goal','边排序':'edge-sorting','成环判断':'cycle-detection',
-  '并查集合并':'union-find','选边与终止':'kruskal-core','复杂度分析':'complexity-analysis',
-  '快速排序':'quick-sort','归并排序':'merge-sort','动态规划入门':'dp-intro',
-  'BFS遍历':'bfs-traversal','DFS遍历':'dfs-traversal','Dijkstra最短路径':'dijkstra-algorithm',
-  'Prim算法':'prim-algorithm','01背包问题':'knapsack-01','二叉树基础':'binary-tree',
-};
-
 function formatTime(iso){
   if(!iso) return '';
   const d = new Date(iso), now = new Date();
@@ -81,6 +73,12 @@ function describeAction(r){
   if(type === 'mark_line'){
     return {desc: `标记了第 <b>${data.line||'?'}</b> 行代码不理解`, dot:'mark', meta: data.knowledge ? `相关知识点：${data.knowledge}` : ''};
   }
+  if(type === 'complete_quiz'){
+    return {desc: `完成测验：<b>${data.node||'未知'}</b>`, dot:'complete', meta: `正确 ${data.correct||0} / ${data.total||0} 题`};
+  }
+  if(type === 'generate_report'){
+    return {desc: `生成了学习报告：<b>${data.node||'未知'}</b>`, dot:'view', meta: `覆盖 ${data.topics||0} 个知识点`};
+  }
   if(type === 'view_step') return {desc:'观看了算法可视化演示', dot:'view', meta:''};
   if(type === 'complete_sort' || type === 'complete_run') return {desc:'完成了一次完整的算法演示', dot:'complete', meta:''};
   const keys = Object.keys(data);
@@ -92,10 +90,17 @@ function renderMiniGraph(skills){
   const empty = document.getElementById('miniGraphEmpty');
   svg.innerHTML = ''; empty.style.display = 'none';
 
-  // Map topic names to kg codes and find matching nodes
+  // Map topic names to kg codes by matching node names
   const skillTopics = Object.keys(skills);
   const matchedCodes = new Set();
-  skillTopics.forEach(t => { const c = topicToCode[t]; if(c) matchedCodes.add(c); });
+  skillTopics.forEach(t => {
+    // Direct name match first, then partial match
+    let found = kgNodes.find(n => n.name === t);
+    if(found){ matchedCodes.add(found.code); return; }
+    // Try matching as substring
+    found = kgNodes.find(n => t.includes(n.name) || n.name.includes(t));
+    if(found){ matchedCodes.add(found.code); return; }
+  });
   if(matchedCodes.size === 0){ empty.style.display = 'block'; return; }
 
   // Filter nodes and edges for this subgraph

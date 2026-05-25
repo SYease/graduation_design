@@ -37,6 +37,35 @@ KNOWLEDGE_MAP = {
     '区间选点': [], 'Huffman树': [], '排序不等式': [], '绝对值不等式': [],
     # 计算几何
     '向量基础': [], '凸包': [],
+    '图的表示': [],
+    '图论基础': [],
+    '贪心策略': [],
+    '并查集': [],
+    'Kruskal 核心流程': [],
+    'Kruskal 与 Prim 对比': [],
+    '最短路径概述': [],
+    '排序算法对比': [],
+    'DP与贪心对比': [],
+    '二叉搜索树操作': [],
+    '树的遍历': [],
+    '二分答案': [],
+    '可持久化数据结构': [],
+    '树与图的存储': [],
+    '染色法判定二分图': [],
+    'Tarjan强连通分量': [],
+    '最近公共祖先LCA': [],
+    '差分约束': [],
+    '网络流初步': [],
+    '计数类DP': [],
+    '数位统计DP': [],
+    '单调队列优化DP': [],
+    '斜率优化DP': [],
+    'Manacher算法': [],
+    '区间覆盖': [],
+    '区间分组': [],
+    '点与线段': [],
+    '线段相交': [],
+    '点在多边形内': [],
 }
 
 KNOWLEDGE_GRAPH_RESOURCES = {
@@ -162,32 +191,90 @@ ADVICE_MAP = {
 }
 
 
+# ===== Bayesian Knowledge Tracing (BKT) =====
+# Parameters tuned for algorithm learning context
+BKT_PRIOR  = 0.15   # p(L₀): initial probability student knows a new topic
+BKT_LEARN  = 0.12   # p(T): probability of learning per practice opportunity
+BKT_GUESS  = 0.20   # p(G): chance of correct guess when not mastered
+BKT_SLIP   = 0.08   # p(S): chance of slip (mistake) when mastered
+
+
+def bkt_update(mastery, correct):
+    """Single BKT update step. Returns new mastery probability [0, 1]."""
+    L = mastery
+    if correct:
+        p_correct_given_known = 1.0 - BKT_SLIP
+        p_correct_given_unknown = BKT_GUESS
+        posterior = (L * p_correct_given_known) / max(
+            L * p_correct_given_known + (1 - L) * p_correct_given_unknown, 0.001)
+    else:
+        p_wrong_given_known = BKT_SLIP
+        p_wrong_given_unknown = 1.0 - BKT_GUESS
+        posterior = (L * p_wrong_given_known) / max(
+            L * p_wrong_given_known + (1 - L) * p_wrong_given_unknown, 0.001)
+    # Learning transition: chance to learn from the attempt
+    L_next = posterior + (1 - posterior) * BKT_LEARN
+    return min(0.99, max(0.01, L_next))
+
+
 def calculate_skill_scores(user_profile_dict, total_animation_steps=50):
     scores = {}
 
     total_viewed = user_profile_dict.get('total_steps_viewed', 0)
-    base_score = 10 if total_viewed > 0 else 0
-    step_bonus = min(30, round((total_viewed / max(total_animation_steps, 1)) * 30))
-
     completed = user_profile_dict.get('completed_runs', 0)
-    complete_bonus = min(30, completed * 15)
-
     marked_lines = user_profile_dict.get('marked_lines', [])
     question_topics = user_profile_dict.get('question_topics', [])
+    wrong_topics = user_profile_dict.get('wrong_topics', [])
 
-    for knowledge, lines in KNOWLEDGE_MAP.items():
-        score = base_score + step_bonus + complete_bonus
+    # Load previous BKT states. Stored as percentages (0-100), convert to [0,1]
+    prev_states = user_profile_dict.get('skill_scores', {})
+    if isinstance(prev_states, str):
+        import json
+        prev_states = json.loads(prev_states) if prev_states else {}
+    # Filter stale entries: 0% scores from old formula have no real interaction
+    prev_states = {k: (v / 100.0 if v > 1.0 else float(v))
+                   for k, v in prev_states.items() if v > 0}
 
-        if knowledge in question_topics:
-            score += 15
+    # Count quiz correct per topic
+    quiz_correct_count = {}
+    for t in question_topics:
+        quiz_correct_count[t] = quiz_correct_count.get(t, 0) + 1
 
-        marked_count = sum(1 for ln in marked_lines if ln in lines)
-        score -= marked_count * 10
+    # Count quiz wrong per topic
+    quiz_wrong_count = {}
+    for t in wrong_topics:
+        quiz_wrong_count[t] = quiz_wrong_count.get(t, 0) + 1
 
-        if knowledge == '复杂度分析':
-            score += question_topics.count('复杂度分析') * 10
+    # Activity bonus: more steps/viewing = slightly higher effective learn rate
+    activity_boost = min(0.06, (total_viewed / max(total_animation_steps, 1)) * 0.03 +
+                              completed * 0.015)
 
-        scores[knowledge] = max(0, min(100, score))
+    for knowledge in KNOWLEDGE_MAP:
+        # Start from last persisted state or prior
+        mastery = float(prev_states.get(knowledge, BKT_PRIOR))
+
+        quiz_correct = quiz_correct_count.get(knowledge, 0)
+        quiz_wrong = quiz_wrong_count.get(knowledge, 0)
+        lines_for_topic = KNOWLEDGE_MAP.get(knowledge, [])
+        mark_hits = sum(1 for ln in marked_lines if ln in lines_for_topic)
+
+        has_activity = quiz_correct > 0 or quiz_wrong > 0 or mark_hits > 0
+        was_scored_before = knowledge in prev_states
+        if not has_activity and not was_scored_before:
+            continue
+
+        for _ in range(quiz_correct):
+            mastery = bkt_update(mastery, correct=True)
+        for _ in range(quiz_wrong):
+            mastery = bkt_update(mastery, correct=False)
+        for _ in range(mark_hits):
+            mastery = bkt_update(mastery, correct=False)
+
+        # Small engagement boost from watching visualization (only if no wrong answers this round)
+        if total_viewed > 0 and quiz_wrong == 0:
+            mastery = min(0.99, mastery + activity_boost * 0.15)
+
+        scores[knowledge] = round(mastery * 100)
 
     return scores
 

@@ -132,6 +132,13 @@ def update_profile():
         user.marked_lines = json.dumps(data['marked_lines'], ensure_ascii=False)
     if 'completed_runs' in data:
         user.completed_runs = int(data['completed_runs'])
+    if 'question_concepts' in data:
+        existing = json.loads(user.question_topics or '[]')
+        for c in data['question_concepts']:
+            node = KnowledgeNode.query.filter_by(code=c, is_active=True).first()
+            topic_name = node.name if node else c
+            existing.append(topic_name)  # Keep all occurrences for BKT counting
+        user.question_topics = json.dumps(existing, ensure_ascii=False)
 
     db.session.commit()
     return jsonify({'success': True})
@@ -168,12 +175,44 @@ def analyze():
     total_steps = int(data.get('total_animation_steps', 50))
 
     user = get_or_create_user()
+    prev_skill_scores = json.loads(user.skill_scores) if user.skill_scores else {}
+
+    # Map quiz wrong concept codes → Chinese topic names
+    wrong_topics_raw = data.get('wrong_concepts', [])
+    wrong_topics = []
+    for c in wrong_topics_raw:
+        node = KnowledgeNode.query.filter_by(code=c, is_active=True).first()
+        if node:
+            wrong_topics.append(node.name)
+        else:
+            wrong_topics.append(c)
+
+    # Map session correct concept codes → Chinese topic names (session-scoped, not accumulated)
+    correct_raw = data.get('question_concepts', [])
+    session_correct_topics = []
+    for c in correct_raw:
+        node = KnowledgeNode.query.filter_by(code=c, is_active=True).first()
+        if node:
+            session_correct_topics.append(node.name)
+        else:
+            session_correct_topics.append(c)
+
+    # Resolve current concept name for report annotation
+    current_code = data.get('current_concept', '')
+    related_topic = ''
+    if current_code:
+        cur_node = KnowledgeNode.query.filter_by(code=current_code, is_active=True).first()
+        if cur_node:
+            related_topic = cur_node.name
+
     profile_dict = {
         'total_steps_viewed': user.total_steps_viewed,
         'marked_lines': json.loads(user.marked_lines),
         'questions_asked': user.questions_asked,
-        'question_topics': json.loads(user.question_topics),
+        'question_topics': session_correct_topics,  # Session-only, not accumulated DB
         'completed_runs': user.completed_runs,
+        'skill_scores': prev_skill_scores,
+        'wrong_topics': wrong_topics,
     }
 
     skill_scores = calculate_skill_scores(profile_dict, total_steps)
@@ -182,7 +221,7 @@ def analyze():
     user.skill_scores = json.dumps(skill_scores, ensure_ascii=False)
     db.session.commit()
 
-    return jsonify({'success': True, 'skill_scores': skill_scores, 'recommendations': recommendations})
+    return jsonify({'success': True, 'skill_scores': skill_scores, 'recommendations': recommendations, 'related_topic': related_topic})
 
 
 @api_bp.route('/path/plan', methods=['POST'])
@@ -231,6 +270,24 @@ def get_records():
     user = get_or_create_user()
     records = LearningRecord.query.filter_by(user_id=user.id).order_by(LearningRecord.created_at.desc()).limit(100).all()
     return jsonify({'success': True, 'records': [r.to_dict() for r in records]})
+
+
+@api_bp.route('/record', methods=['POST'])
+def create_record():
+    """Create a learning record for the current user."""
+    data = request.get_json() or {}
+    action_type = data.get('action_type', 'unknown')
+    action_data = data.get('action_data', {})
+
+    user = get_or_create_user()
+    record = LearningRecord(
+        user_id=user.id,
+        action_type=action_type,
+        action_data=json.dumps(action_data, ensure_ascii=False),
+    )
+    db.session.add(record)
+    db.session.commit()
+    return jsonify({'success': True, 'id': record.id})
 
 
 @api_bp.route('/quiz', methods=['GET'])
