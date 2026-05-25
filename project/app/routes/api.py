@@ -313,58 +313,6 @@ def get_quiz():
     return jsonify({'success': True, 'questions': questions, 'total': len(questions)})
 
 
-@api_bp.route('/admin/nodes', methods=['POST'])
-@admin_required
-def admin_add_node():
-    data = request.get_json() or {}
-    code = (data.get('code') or '').strip()
-    name = (data.get('name') or '').strip()
-    if not code or not name:
-        return jsonify({'success': False, 'error': 'code 和 name 必填'}), 400
-
-    exists = KnowledgeNode.query.filter_by(code=code).first()
-    if exists:
-        return jsonify({'success': False, 'error': 'code 已存在'}), 400
-
-    node = KnowledgeNode(
-        code=code,
-        name=name,
-        summary=(data.get('summary') or '').strip(),
-        difficulty=(data.get('difficulty') or 'medium').strip(),
-        category=(data.get('category') or 'algorithm').strip(),
-        is_active=True,
-    )
-    db.session.add(node)
-    db.session.commit()
-    return jsonify({'success': True, 'node': node.to_dict()})
-
-
-@api_bp.route('/admin/edges', methods=['POST'])
-@admin_required
-def admin_add_edge():
-    data = request.get_json() or {}
-    source_code = (data.get('source_code') or '').strip()
-    target_code = (data.get('target_code') or '').strip()
-    if not source_code or not target_code:
-        return jsonify({'success': False, 'error': 'source_code 和 target_code 必填'}), 400
-
-    source = KnowledgeNode.query.filter_by(code=source_code, is_active=True).first()
-    target = KnowledgeNode.query.filter_by(code=target_code, is_active=True).first()
-    if not source or not target:
-        return jsonify({'success': False, 'error': '节点不存在'}), 400
-
-    edge = KnowledgeEdge(
-        source_node_id=source.id,
-        target_node_id=target.id,
-        relation_type=(data.get('relation_type') or 'prerequisite').strip(),
-        weight=float(data.get('weight') or 1.0),
-    )
-    db.session.add(edge)
-    db.session.commit()
-
-    return jsonify({'success': True, 'edge': edge.to_dict()})
-
-
 @api_bp.route('/admin/users', methods=['GET'])
 @admin_required
 def admin_list_users():

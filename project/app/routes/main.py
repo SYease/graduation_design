@@ -106,20 +106,6 @@ def profile_page():
     return render_template('profile.html', session_id=session['session_id'])
 
 
-@main_bp.route('/admin/graph')
-@admin_required
-def admin_graph_page():
-    _ensure_session()
-    nodes = KnowledgeNode.query.filter_by(is_active=True).all()
-    edges = KnowledgeEdge.query.all()
-    return render_template(
-        'admin_graph.html',
-        nodes=[n.to_dict() for n in nodes],
-        edges=[e.to_dict() for e in edges],
-        session_id=session['session_id'],
-    )
-
-
 @main_bp.route('/seed')
 def seed_graph_data():
     _ensure_session()
