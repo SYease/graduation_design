@@ -76,6 +76,7 @@ class LLMProvider:
 
 def get_provider(config):
     provider_name = (config.get('AI_PROVIDER') or 'rule_based').lower()
+    # 有API Key走大模型，没有走本地规则引擎
     if provider_name == 'llm' and config.get('AI_API_KEY'):
         return LLMProvider(
             api_key=config.get('AI_API_KEY'),

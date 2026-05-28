@@ -8,6 +8,7 @@ db = SQLAlchemy()
 
 
 def create_app(config_name='default'):
+    # 工厂函数：按配置名创建Flask实例，注册3个Blueprint，初始化数据库
     app = Flask(__name__, instance_relative_config=True)
     app.config.from_object(config[config_name])
 

@@ -200,7 +200,7 @@ BKT_SLIP   = 0.08   # p(S): chance of slip (mistake) when mastered
 
 
 def bkt_update(mastery, correct):
-    """Single BKT update step. Returns new mastery probability [0, 1]."""
+    # BKT核心：根据答对/答错，用贝叶斯公式更新掌握概率
     L = mastery
     if correct:
         p_correct_given_known = 1.0 - BKT_SLIP
