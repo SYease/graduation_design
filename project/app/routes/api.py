@@ -292,8 +292,12 @@ def create_record():
 
 @api_bp.route('/quiz', methods=['GET'])
 def get_quiz():
+    import random
+
     difficulty = (request.args.get('difficulty') or '').strip().lower()
-    concept = (request.args.get('concept') or '').strip().lower()
+    concepts = request.args.getlist('concept')
+    concepts = [c.strip().lower() for c in concepts if c.strip()]
+    limit = request.args.get('limit', type=int, default=0)
 
     quiz_path = os.path.join(current_app.config.get('BASE_DIR', ''), 'data', 'quiz_bank.json')
     if not os.path.exists(quiz_path):
@@ -307,8 +311,11 @@ def get_quiz():
 
     if difficulty:
         questions = [q for q in questions if q.get('difficulty', '') == difficulty]
-    if concept:
-        questions = [q for q in questions if q.get('concept', '') == concept]
+    if concepts:
+        questions = [q for q in questions if q.get('concept', '') in concepts]
+
+    if limit > 0 and len(questions) > limit:
+        questions = random.sample(questions, limit)
 
     return jsonify({'success': True, 'questions': questions, 'total': len(questions)})
 

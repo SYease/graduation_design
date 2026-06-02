@@ -291,7 +291,8 @@ const quizConcepts = {{ content.get('quiz_concepts', []) | tojson | safe }};
 
 async function loadQuiz(diff){
   let url='/api/quiz'; const p=[]; if(diff) p.push('difficulty='+encodeURIComponent(diff));
-  if(quizConcepts.length>0) p.push('concept='+encodeURIComponent(quizConcepts[0]));
+  quizConcepts.forEach(c => p.push('concept='+encodeURIComponent(c)));
+	  p.push('limit=5');
   if(p.length) url+='?'+p.join('&');
   const res=await fetch(url); const data=await res.json();
   if(data.success&&data.questions.length){ quizQuestions=data.questions; quizIdx=0; quizCorrect=0; quizTotal=0; profileState.question_concepts=[]; profileState.wrong_concepts=[]; renderQuiz(); }
@@ -382,6 +383,7 @@ function buildSteps(){
   function find(x){ while(parent[x]!==x){ parent[x]=parent[parent[x]]; x=parent[x]; } return x; }
   function unite(x,y){ x=find(x); y=find(y); if(x===y) return; if(rnk[x]<rnk[y]) parent[x]=y; else if(rnk[x]>rnk[y]) parent[y]=x; else{ parent[y]=x; rnk[x]++; } }
   const sorted=vizData.edges.map((e,i)=>({u:e[0],v:e[1],w:e[2],id:'e'+(i+1)})).sort((a,b)=>a.w-b.w);
+  vizData.sortedEdges = sorted;
   let mst=[],rej=[],total=0,proc=0;
   animSteps.push({type:'init',op:'初始化：每个顶点自成一集合',mst:[],rej:[],parent:clone(parent),rnk:clone(rnk),total,proc,edge:null});
   sorted.forEach(edge=>{ proc++;
@@ -411,8 +413,15 @@ function renderViz(){
     const t=document.createElementNS('http://www.w3.org/2000/svg','text'); t.setAttribute('x',p.x); t.setAttribute('y',p.y+4); t.setAttribute('text-anchor','middle'); t.setAttribute('font-size','12'); t.textContent=n; svg.appendChild(t);
   });
   el('v-status').textContent=s.op;if(s.type==='done'){el('v-status').textContent='演示完成';el('v-status').style.color='#16a34a';el('v-status').style.fontWeight='bold';}else{el('v-status').style.color='';el('v-status').style.fontWeight='';} el('v-accepted').textContent=(s.mst||[]).length; el('v-weight').textContent=s.total||0; el('v-processed').textContent=s.proc||0;
-  el('v-edgelist').innerHTML=vizData.edges.map((e,i)=>`<li>${nodes[e[0]]}-${nodes[e[1]]}(w=${e[2]})</li>`).join('');
-  el('v-ufstate').innerHTML=nodes.map((n,i)=>`${n}:${s.parent[i]}`).join(' | ');
+  const sortedEdges=vizData.sortedEdges||[];
+  el('v-edgelist').innerHTML=sortedEdges.map(se=>{
+    let st='';
+    if(mstSet.has(se.id)) st='color:#16a34a;font-weight:bold';
+    else if(rejSet.has(se.id)) st='color:#dc2626;text-decoration:line-through';
+    else if(s.edge&&s.edge.id===se.id) st='color:#2563eb;font-weight:bold';
+    return `<li style="${st}">${nodes[se.u]}-${nodes[se.v]}(w=${se.w})</li>`;
+  }).join('');
+  el('v-ufstate').innerHTML=nodes.map((n,i)=>`<span>${n}:${nodes[s.parent[i]]}</span>`).join(' &nbsp;|&nbsp; ');
   if(curStep>0){ profileState.total_steps_viewed++; if(s.type==='done') profileState.completed_runs++; }
 }
 function loadViz(p){ vizData=PRESETS[p]; buildSteps(); curStep=0; renderViz(); }

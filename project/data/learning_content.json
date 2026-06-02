@@ -129,7 +129,14 @@
       "并查集和标号法有什么区别"
     ],
     "quiz_concepts": [
-      "kruskal-core"
+      "kruskal-core",
+      "mst-goal",
+      "edge-sorting",
+      "cycle-detection",
+      "union-find",
+      "greedy-strategy",
+      "complexity-analysis",
+      "path-comparison"
     ],
     "has_visualization": true,
     "viz_type": "kruskal",

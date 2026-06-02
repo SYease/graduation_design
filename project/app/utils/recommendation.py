@@ -191,16 +191,16 @@ ADVICE_MAP = {
 }
 
 
-# ===== Bayesian Knowledge Tracing (BKT) =====
-# Parameters tuned for algorithm learning context
-BKT_PRIOR  = 0.15   # p(L₀): initial probability student knows a new topic
-BKT_LEARN  = 0.12   # p(T): probability of learning per practice opportunity
-BKT_GUESS  = 0.20   # p(G): chance of correct guess when not mastered
-BKT_SLIP   = 0.08   # p(S): chance of slip (mistake) when mastered
+#贝叶斯
+#参数
+BKT_PRIOR  = 0.15   # p(L₀): 先验参数
+BKT_LEARN  = 0.12   # p(T): 学习参数
+BKT_GUESS  = 0.20   # p(G): 猜对参数
+BKT_SLIP   = 0.08   # p(S): 失误参数
 
 
 def bkt_update(mastery, correct):
-    # BKT核心：根据答对/答错，用贝叶斯公式更新掌握概率
+    # 根据是否答对，用贝叶斯公式更新掌握概率
     L = mastery
     if correct:
         p_correct_given_known = 1.0 - BKT_SLIP
@@ -212,7 +212,7 @@ def bkt_update(mastery, correct):
         p_wrong_given_unknown = 1.0 - BKT_GUESS
         posterior = (L * p_wrong_given_known) / max(
             L * p_wrong_given_known + (1 - L) * p_wrong_given_unknown, 0.001)
-    # Learning transition: chance to learn from the attempt
+    #更新掌握度
     L_next = posterior + (1 - posterior) * BKT_LEARN
     return min(0.99, max(0.01, L_next))
 
@@ -226,31 +226,31 @@ def calculate_skill_scores(user_profile_dict, total_animation_steps=50):
     question_topics = user_profile_dict.get('question_topics', [])
     wrong_topics = user_profile_dict.get('wrong_topics', [])
 
-    # Load previous BKT states. Stored as percentages (0-100), convert to [0,1]
+    #加载此前的掌握度，并且转化为小数
     prev_states = user_profile_dict.get('skill_scores', {})
     if isinstance(prev_states, str):
         import json
         prev_states = json.loads(prev_states) if prev_states else {}
-    # Filter stale entries: 0% scores from old formula have no real interaction
+    #过滤数据防止出现没答题有分
     prev_states = {k: (v / 100.0 if v > 1.0 else float(v))
                    for k, v in prev_states.items() if v > 0}
 
-    # Count quiz correct per topic
+    # 统计对的次数
     quiz_correct_count = {}
     for t in question_topics:
         quiz_correct_count[t] = quiz_correct_count.get(t, 0) + 1
 
-    # Count quiz wrong per topic
+    #统计错的次数
     quiz_wrong_count = {}
     for t in wrong_topics:
         quiz_wrong_count[t] = quiz_wrong_count.get(t, 0) + 1
 
-    # Activity bonus: more steps/viewing = slightly higher effective learn rate
+    #活跃度加权
     activity_boost = min(0.06, (total_viewed / max(total_animation_steps, 1)) * 0.03 +
                               completed * 0.015)
 
     for knowledge in KNOWLEDGE_MAP:
-        # Start from last persisted state or prior
+        #优先有的
         mastery = float(prev_states.get(knowledge, BKT_PRIOR))
 
         quiz_correct = quiz_correct_count.get(knowledge, 0)
@@ -270,7 +270,7 @@ def calculate_skill_scores(user_profile_dict, total_animation_steps=50):
         for _ in range(mark_hits):
             mastery = bkt_update(mastery, correct=False)
 
-        # Small engagement boost from watching visualization (only if no wrong answers this round)
+        #观看可视化得分
         if total_viewed > 0 and quiz_wrong == 0:
             mastery = min(0.99, mastery + activity_boost * 0.15)
 

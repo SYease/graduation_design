@@ -3399,5 +3399,480 @@
       "太少",
       "太大"
     ]
+  },
+  {
+    "id": "mst-3",
+    "concept": "mst-goal",
+    "difficulty": "easy",
+    "stem": "一个含有6个顶点的连通图，其最小生成树有几条边？",
+    "options": [
+      "6条",
+      "5条",
+      "7条",
+      "取决于边数"
+    ],
+    "correctIndex": 1,
+    "explanations": [
+      "n个顶点的树有n-1条边",
+      "正确，6-1=5条边",
+      "太多",
+      "MST的边数恒为n-1"
+    ]
+  },
+  {
+    "id": "mst-4",
+    "concept": "mst-goal",
+    "difficulty": "medium",
+    "stem": "如果图本身不连通，对每个连通分量求MST得到的是什么？",
+    "options": [
+      "最小生成树",
+      "最小生成森林",
+      "最短路径树",
+      "深度优先搜索树"
+    ],
+    "correctIndex": 1,
+    "explanations": [
+      "不连通图没有生成树",
+      "正确，每个连通分量一棵MST",
+      "不同概念",
+      "不同概念"
+    ]
+  },
+  {
+    "id": "mst-5",
+    "concept": "mst-goal",
+    "difficulty": "medium",
+    "stem": "最小生成树和最短路径树的区别是什么？",
+    "options": [
+      "两者完全相同",
+      "MST最小化总边权，最短路径树最小化根到各点的路径长度",
+      "MST一定是单源最短路径树",
+      "最短路径树一定是最小生成树"
+    ],
+    "correctIndex": 1,
+    "explanations": [
+      "不同",
+      "正确，两者优化目标不同",
+      "不是，反例很容易构造",
+      "不是"
+    ]
+  },
+  {
+    "id": "sort-3",
+    "concept": "edge-sorting",
+    "difficulty": "easy",
+    "stem": "Kruskal算法中，排序边之后做了什么？",
+    "options": [
+      "随机选边",
+      "从小到大遍历每条边，用并查集判断是否成环",
+      "从大到小遍历每条边",
+      "先DFS遍历图"
+    ],
+    "correctIndex": 1,
+    "explanations": [
+      "不是随机",
+      "正确，贪心地从小到大选边",
+      "方向反了",
+      "Kruskal不需要DFS"
+    ]
+  },
+  {
+    "id": "sort-4",
+    "concept": "edge-sorting",
+    "difficulty": "medium",
+    "stem": "如果两条边的权值相等，Kruskal如何处理？",
+    "options": [
+      "算法失效",
+      "任意顺序处理均可，MST可能不唯一但总权值唯一",
+      "必须选择节点编号小的边",
+      "跳过这两条边"
+    ],
+    "correctIndex": 1,
+    "explanations": [
+      "仍然有效",
+      "正确，相等权值边的处理顺序不影响最终MST的总权值",
+      "不是必须",
+      "不能跳过"
+    ]
+  },
+  {
+    "id": "cycle-2",
+    "concept": "cycle-detection",
+    "difficulty": "medium",
+    "stem": "在Kruskal中判断一条边(u,v)是否成环，应该检查什么？",
+    "options": [
+      "u和v的度数",
+      "find(u)是否等于find(v)",
+      "边的权值大小",
+      "u和v是否相邻"
+    ],
+    "correctIndex": 1,
+    "explanations": [
+      "度数与成环无关",
+      "正确，同集合=已在同一连通分量=加入会成环",
+      "权值与成环判断无关",
+      "在原图中相邻不代表在MST中已连通"
+    ]
+  },
+  {
+    "id": "cycle-3",
+    "concept": "cycle-detection",
+    "difficulty": "hard",
+    "stem": "如果不使用并查集，如何判断加入边(u,v)是否会成环？",
+    "options": [
+      "无法判断",
+      "用DFS/BFS检查u和v在当前MST中是否已经连通",
+      "检查边的权值",
+      "随机猜"
+    ],
+    "correctIndex": 1,
+    "explanations": [
+      "可以判断",
+      "正确，但每次判环O(V+E)，总复杂度变为O(E*(V+E))",
+      "不相关",
+      "不能靠猜"
+    ]
+  },
+  {
+    "id": "union-2",
+    "concept": "union-find",
+    "difficulty": "medium",
+    "stem": "并查集的按秩合并优化中，\"秩\"通常指什么？",
+    "options": [
+      "节点的值",
+      "以该节点为根的树的深度上界",
+      "节点的度数",
+      "节点的编号"
+    ],
+    "correctIndex": 1,
+    "explanations": [
+      "不是",
+      "正确，总是将秩小的树合并到秩大的树下",
+      "不是",
+      "不是"
+    ]
+  },
+  {
+    "id": "union-3",
+    "concept": "union-find",
+    "difficulty": "medium",
+    "stem": "只使用路径压缩而不使用按秩合并，并查集的单次操作复杂度是多少？",
+    "options": [
+      "O(1)",
+      "均摊近乎O(1)，但单次可能O(log n)",
+      "O(n²)",
+      "O(2^n)"
+    ],
+    "correctIndex": 1,
+    "explanations": [
+      "不是严格O(1)",
+      "正确，路径压缩+按秩合并才能达到反阿克曼函数",
+      "太高",
+      "不可能"
+    ]
+  },
+  {
+    "id": "union-4",
+    "concept": "union-find",
+    "difficulty": "hard",
+    "stem": "并查集的find操作中，路径压缩做了什么事？",
+    "options": [
+      "将树的高度增加",
+      "将查找路径上的所有节点直接连接到根节点",
+      "将根节点删除",
+      "交换两个节点的位置"
+    ],
+    "correctIndex": 1,
+    "explanations": [
+      "压缩会减少高度",
+      "正确，parent[x]=find(parent[x])",
+      "不是",
+      "不是"
+    ]
+  },
+  {
+    "id": "kruskal-2",
+    "concept": "kruskal-core",
+    "difficulty": "easy",
+    "stem": "Kruskal算法属于哪一类算法策略？",
+    "options": [
+      "动态规划",
+      "贪心算法",
+      "分治算法",
+      "回溯算法"
+    ],
+    "correctIndex": 1,
+    "explanations": [
+      "不是DP",
+      "正确，每次选当前最小的不成环的边",
+      "不是分治",
+      "不是回溯"
+    ]
+  },
+  {
+    "id": "kruskal-3",
+    "concept": "kruskal-core",
+    "difficulty": "medium",
+    "stem": "Kruskal算法第1步是什么？第2步是什么？",
+    "options": [
+      "DFS→BFS",
+      "边排序→从小到大遍历并用并查集判环选边",
+      "选起点→松弛",
+      "建堆→删除"
+    ],
+    "correctIndex": 1,
+    "explanations": [
+      "不是图遍历",
+      "正确，排序+并查集判环是Kruskal的核心两步",
+      "这是Prim",
+      "不是"
+    ]
+  },
+  {
+    "id": "kruskal-4",
+    "concept": "kruskal-core",
+    "difficulty": "medium",
+    "stem": "一个有V个顶点E条边的连通图，Kruskal算法最终选了多少条边？",
+    "options": [
+      "E条",
+      "V-1条",
+      "V条",
+      "E-V条"
+    ],
+    "correctIndex": 1,
+    "explanations": [
+      "不可能选全部边(会成环)",
+      "正确，生成树恰好V-1条边",
+      "太多，会成环",
+      "不是"
+    ]
+  },
+  {
+    "id": "kruskal-5",
+    "concept": "kruskal-core",
+    "difficulty": "medium",
+    "stem": "在Kruskal算法执行过程中，已选边集合始终保持什么性质？",
+    "options": [
+      "连通",
+      "无环（是一个森林）",
+      "包含所有顶点",
+      "总权值最大"
+    ],
+    "correctIndex": 1,
+    "explanations": [
+      "中间过程不一定连通",
+      "正确，每次选边都保证不形成环",
+      "结束时才包含所有顶点",
+      "恰恰相反"
+    ]
+  },
+  {
+    "id": "kruskal-6",
+    "concept": "kruskal-core",
+    "difficulty": "hard",
+    "stem": "Kruskal算法执行结束后，如果已选边数少于V-1条，说明什么？",
+    "options": [
+      "算法实现有bug",
+      "原图不连通，无法生成一棵完整的生成树",
+      "边排序出了问题",
+      "需要换用Prim算法"
+    ],
+    "correctIndex": 1,
+    "explanations": [
+      "不一定是bug",
+      "正确，不连通图只能得到最小生成森林",
+      "不一定",
+      "Prim也不能解决不连通问题"
+    ]
+  },
+  {
+    "id": "greedy-3",
+    "concept": "greedy-strategy",
+    "difficulty": "medium",
+    "stem": "为什么Kruskal的贪心策略对MST问题是正确的？",
+    "options": [
+      "没有原因",
+      "MST问题具有拟阵结构，贪心选择性质可被数学证明",
+      "因为边排序了",
+      "只是巧合"
+    ],
+    "correctIndex": 1,
+    "explanations": [
+      "有严格的数学证明",
+      "正确，拟阵(matroid)理论保证了贪心的正确性",
+      "排序只是实现手段",
+      "不是巧合"
+    ]
+  },
+  {
+    "id": "greedy-4",
+    "concept": "greedy-strategy",
+    "difficulty": "hard",
+    "stem": "以下哪个问题不能用贪心算法求得最优解？",
+    "options": [
+      "最小生成树(MST)",
+      "01背包问题",
+      "Huffman编码",
+      "区间选点问题"
+    ],
+    "correctIndex": 1,
+    "explanations": [
+      "MST可用贪心(Kruskal/Prim)",
+      "正确，01背包不具备贪心选择性质，需用DP",
+      "Huffman可用贪心",
+      "区间选点贪心是最优的"
+    ]
+  },
+  {
+    "id": "complex-2",
+    "concept": "complexity-analysis",
+    "difficulty": "medium",
+    "stem": "Kruskal算法中，如果使用计数排序（假设权值为小整数），排序复杂度可降为多少？",
+    "options": [
+      "O(E log E)",
+      "O(E+W)，W为最大权值",
+      "O(V²)",
+      "无法优化"
+    ],
+    "correctIndex": 1,
+    "explanations": [
+      "比较排序的复杂度",
+      "正确，非比较排序可线性时间，但总复杂度还取决于并查集",
+      "不是",
+      "可以优化"
+    ]
+  },
+  {
+    "id": "complex-3",
+    "concept": "complexity-analysis",
+    "difficulty": "hard",
+    "stem": "Kruskal使用路径压缩+按秩合并的并查集后，总时间复杂度是多少？",
+    "options": [
+      "O(V²+E)",
+      "O(E log E)（排序主导），并查集操作近乎O(1)",
+      "O(V log V)",
+      "O(E²)"
+    ],
+    "correctIndex": 1,
+    "explanations": [
+      "太高，标号法的复杂度",
+      "正确，排序O(E log E)为主导，并查集近乎常数时间",
+      "不是",
+      "太高"
+    ]
+  },
+  {
+    "id": "pcmp-3",
+    "concept": "path-comparison",
+    "difficulty": "medium",
+    "stem": "Prim算法和Kruskal算法都会得到同样的MST吗？",
+    "options": [
+      "一定相同",
+      "总权值一定相同，但具体的边集可能不同",
+      "一定不同",
+      "权值也可能不同"
+    ],
+    "correctIndex": 1,
+    "explanations": [
+      "边集可能不同",
+      "正确，MST可能不唯一但最小总权值唯一",
+      "可能相同",
+      "总权值一定相同"
+    ]
+  },
+  {
+    "id": "pcmp-4",
+    "concept": "path-comparison",
+    "difficulty": "hard",
+    "stem": "在什么情况下Kruskal明显优于Prim？",
+    "options": [
+      "完全图（稠密图）",
+      "稀疏图（E≈V），此时Kruskal的O(E log E) ≈ O(V log V)",
+      "两者性能总是相同",
+      "无权图"
+    ],
+    "correctIndex": 1,
+    "explanations": [
+      "稠密图Prim更优",
+      "正确，稀疏图中E较小，Kruskal优势明显",
+      "性能不同",
+      "不是决定因素"
+    ]
+  },
+  {
+    "id": "kruskal-7",
+    "concept": "kruskal-core",
+    "difficulty": "easy",
+    "stem": "Kruskal算法中，并查集初始时每个顶点的parent指向谁？",
+    "options": [
+      "指向0",
+      "指向自己（parent[i]=i）",
+      "指向根节点",
+      "指向父节点"
+    ],
+    "correctIndex": 1,
+    "explanations": [
+      "不是",
+      "正确，初始时每个顶点自成一个集合",
+      "初始没有根节点",
+      "初始没有父节点"
+    ]
+  },
+  {
+    "id": "kruskal-8",
+    "concept": "kruskal-core",
+    "difficulty": "hard",
+    "stem": "Kruskal算法遍历边时，何时可以提前终止？",
+    "options": [
+      "遍历完所有边才能终止",
+      "当选够V-1条边时（cnt==n-1），无需继续遍历剩余边",
+      "遍历到一半时",
+      "任何时候都可以"
+    ],
+    "correctIndex": 1,
+    "explanations": [
+      "可以提前终止",
+      "正确，已选满MST所需的n-1条边",
+      "不准确",
+      "必须在选满时终止"
+    ]
+  },
+  {
+    "id": "mst-6",
+    "concept": "mst-goal",
+    "difficulty": "easy",
+    "stem": "最小生成树在实际中有哪些应用？",
+    "options": [
+      "没有实际应用",
+      "网络布线、电路设计、交通规划等最小成本连接问题",
+      "只能用于排序",
+      "只能用于字符串匹配"
+    ],
+    "correctIndex": 1,
+    "explanations": [
+      "有很多应用",
+      "正确，MST广泛应用于最小化连接成本的问题",
+      "不是",
+      "不是"
+    ]
+  },
+  {
+    "id": "union-5",
+    "concept": "union-find",
+    "difficulty": "easy",
+    "stem": "并查集的init（初始化）操作的时间复杂度是？",
+    "options": [
+      "O(log n)",
+      "O(n)——每个元素需要初始化为独立的集合",
+      "O(1)",
+      "O(n²)"
+    ],
+    "correctIndex": 1,
+    "explanations": [
+      "不是",
+      "正确，需要遍历所有元素将其parent设为自己",
+      "不可能只初始化一个",
+      "太高"
+    ]
   }
 ]
